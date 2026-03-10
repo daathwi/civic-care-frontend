@@ -1,0 +1,8 @@
+{
+  "name": "grievance-app-web",
+  "private": true,
+  "scripts": {
+    "serve": "npx -y serve build/web -l 8080",
+    "start": "npx -y serve build/web -l 8080"
+  }
+}

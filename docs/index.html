@@ -1,0 +1,1708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CivicCare — Documentation</title>
+  <meta name="description" content="Official documentation for CivicCare, an AI-powered civic grievance platform for transparent governance.">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏛️</text></svg>">
+</head>
+<body>
+
+<!-- ==================== HEADER ==================== -->
+<header class="site-header" id="siteHeader">
+  <div class="header-inner">
+    <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle navigation">☰</button>
+    <a href="#overview" class="brand">
+      <div class="brand-icon">🏛</div>
+      CivicCare <span>Docs</span>
+    </a>
+    <div class="search-wrapper">
+      <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" class="search-input" id="searchInput" placeholder="Search documentation..." autocomplete="off">
+      <span class="search-shortcut">⌘K</span>
+      <div class="search-results" id="searchResults"></div>
+    </div>
+    <div class="header-actions">
+      <a href="https://github.com/daathwi/civic-care-frontend" class="header-btn ghost" target="_blank" rel="noopener">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.335-1.755-1.335-1.755-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.605-.015 2.896-.015 3.286 0 .315.21.694.825.576C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12"/></svg>
+        <span>GitHub</span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- ==================== SIDEBAR ==================== -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-heading">Getting Started</div>
+  <a href="#overview" class="sidebar-link active" data-section="overview">
+    <span class="link-icon">🏠</span> Overview
+  </a>
+  <a href="#in-progress" class="sidebar-link" data-section="in-progress">
+    <span class="link-icon">🔨</span> What's in Progress
+  </a>
+  <a href="#quick-start" class="sidebar-link" data-section="quick-start">
+    <span class="link-icon">⚡</span> Quick Start
+  </a>
+  <a href="#installation" class="sidebar-link" data-section="installation">
+    <span class="link-icon">📦</span> Installation
+  </a>
+
+  <div class="sidebar-heading">Platform</div>
+  <a href="#architecture" class="sidebar-link" data-section="architecture">
+    <span class="link-icon">🏗</span> Architecture
+  </a>
+  <a href="#tech-stack" class="sidebar-link" data-section="tech-stack">
+    <span class="link-icon">🔧</span> Tech Stack
+  </a>
+  <a href="#user-roles" class="sidebar-link" data-section="user-roles">
+    <span class="link-icon">👥</span> User Roles
+  </a>
+
+  <div class="sidebar-heading">Core Features</div>
+  <a href="#features" class="sidebar-link" data-section="features">
+    <span class="link-icon">✨</span> Features Overview
+  </a>
+  <a href="#grievance-flow" class="sidebar-link" data-section="grievance-flow">
+    <span class="link-icon">📋</span> Grievance Flow
+  </a>
+  <a href="#ai-integration" class="sidebar-link" data-section="ai-integration">
+    <span class="link-icon">🤖</span> AI Integration
+  </a>
+  <a href="#community" class="sidebar-link" data-section="community">
+    <span class="link-icon">🌐</span> Community & Feed
+  </a>
+  <a href="#sdg-impact" class="sidebar-link" data-section="sdg-impact">
+    <span class="link-icon">🎯</span> SDG & Impact Metrics
+  </a>
+
+  <div class="sidebar-heading">For Developers</div>
+  <a href="#api-reference" class="sidebar-link" data-section="api-reference">
+    <span class="link-icon">📡</span> API Reference
+  </a>
+  <a href="#data-models" class="sidebar-link" data-section="data-models">
+    <span class="link-icon">🗄</span> Data Models
+  </a>
+  <a href="#websockets" class="sidebar-link" data-section="websockets">
+    <span class="link-icon">🔌</span> WebSockets
+  </a>
+
+  <div class="sidebar-heading">Guides</div>
+  <a href="#citizen-guide" class="sidebar-link" data-section="citizen-guide">
+    <span class="link-icon">📱</span> Citizen Guide
+  </a>
+  <a href="#manager-guide" class="sidebar-link" data-section="manager-guide">
+    <span class="link-icon">📊</span> Manager Guide
+  </a>
+  <a href="#worker-guide" class="sidebar-link" data-section="worker-guide">
+    <span class="link-icon">🔨</span> Field Worker Guide
+  </a>
+  <a href="#admin-guide" class="sidebar-link" data-section="admin-guide">
+    <span class="link-icon">⚙️</span> Admin Console
+  </a>
+
+  <div class="sidebar-heading">More</div>
+  <a href="#faq" class="sidebar-link" data-section="faq">
+    <span class="link-icon">❓</span> FAQ
+  </a>
+  <a href="#team" class="sidebar-link" data-section="team">
+    <span class="link-icon">👨‍💻</span> Team
+  </a>
+</nav>
+
+<!-- ==================== MAIN ==================== -->
+<div class="layout">
+  <main class="main-content" id="mainContent">
+
+    <!-- ====== OVERVIEW / HERO ====== -->
+    <section class="doc-section" id="overview">
+      <div class="hero">
+        <div class="hero-badge">🏛 Digital Democracy · Stack Syndicate</div>
+        <h1>CivicCare<br>Documentation</h1>
+        <p>
+          AI-Powered Civic Grievance Command Center — transforming citizen complaints into verified resolutions through intelligent automation, GPS-locked proof, and real-time accountability.
+        </p>
+        <div class="hero-actions">
+          <a href="#quick-start" class="btn btn-white">Get Started →</a>
+          <a href="#features" class="btn btn-outline-white">Explore Features</a>
+        </div>
+      </div>
+
+      <div class="stats-row fade-in">
+        <div class="stat-card">
+          <div class="stat-value">48h</div>
+          <div class="stat-label">Resolution Target</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">4</div>
+          <div class="stat-label">User Roles</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">4</div>
+          <div class="stat-label">AI Modules</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">17</div>
+          <div class="stat-label">SDGs Mapped</div>
+        </div>
+      </div>
+
+      <div class="section-label"><span class="label-line"></span> About CivicCare</div>
+      <h2>From Citizen Voice to Accountable Governance</h2>
+      <p class="section-desc">
+        CivicCare is an AI-powered civic grievance platform with rich analytics, accessible via both mobile and web. Its interface adapts to each user's role — citizens, field managers, field assistants, and administrators — making it easy to report, track, and resolve MCD (Municipal Corporation of Delhi) grievances efficiently.
+      </p>
+      <p>
+        Unlike traditional complaint boxes, CivicCare is a <strong>complete ecosystem</strong> built for transparent civic governance. From AI-driven intelligence to public awareness, every feature is an interconnected link in the chain of accountability.
+      </p>
+
+      <div class="callout info">
+        <span class="callout-icon">💡</span>
+        <div>
+          <strong>Mission:</strong> From Citizen Voice to Real-Time, Accountable Governance. CivicCare digitises transparency, efficiency, and accountability — not just complaints.
+        </div>
+      </div>
+
+      <h3>Why CivicCare?</h3>
+      <p>Current municipal systems face critical challenges that erode public trust:</p>
+      <div class="card-grid cols-3 stagger fade-in">
+        <div class="card">
+          <div class="card-icon red">⏱</div>
+          <h4>Delayed Resolution</h4>
+          <p>2,000+ unresolved civic complaints pile up due to manual routing and lack of follow-through.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon orange">🔍</div>
+          <h4>No Verification</h4>
+          <p>Completed tasks have no GPS-locked or photo-verified proof, leading to false closures.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon blue">📊</div>
+          <h4>Limited Transparency</h4>
+          <p>Citizens cannot track their complaints in real-time. There's no micro-accountability at the ward level.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== WHAT'S IN PROGRESS ====== -->
+    <section class="doc-section" id="in-progress">
+      <div class="section-label"><span class="label-line"></span> Roadmap</div>
+      <h2>What's in Progress</h2>
+      <p class="section-desc">So you know what’s done vs what we’re still building. Items here use the <span class="badge progress">IN PROGRESS</span> badge and are updated as we go.</p>
+      <div class="card">
+        <ul style="margin: 0; padding-left: 20px;">
+          <li style="margin-bottom: 10px;">Full offline-first support with sync <span class="badge progress">IN PROGRESS</span></li>
+          <li style="margin-bottom: 10px;">Expanded multi-language support <span class="badge progress">IN PROGRESS</span></li>
+          <li style="margin-bottom: 10px;">Admin LLM report export &amp; dashboards <span class="badge progress">IN PROGRESS</span></li>
+          <li style="margin-bottom: 10px;">API rate limiting &amp; usage docs <span class="badge progress">IN PROGRESS</span></li>
+          <li style="margin-bottom: 10px;">E2E and load testing suite <span class="badge progress">IN PROGRESS</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ====== QUICK START ====== -->
+    <section class="doc-section" id="quick-start">
+      <div class="section-label"><span class="label-line"></span> Getting Started</div>
+      <h2>Quick Start</h2>
+      <p class="section-desc">Get CivicCare running locally in minutes. The platform consists of a Flutter mobile/web app, a FastAPI backend, and an AI module powered by local LLMs.</p>
+
+      <h3>Prerequisites</h3>
+      <div class="card-grid cols-2">
+        <div class="card">
+          <h4>Frontend</h4>
+          <p>Flutter SDK 3.19+, Dart 3.3+, Android Studio or Xcode for device emulators.</p>
+        </div>
+        <div class="card">
+          <h4>Backend</h4>
+          <p>Python 3.11+, PostgreSQL 15+, Ollama (for local LLM), and uv or pip for package management.</p>
+        </div>
+      </div>
+
+      <h3>Project Structure</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Directory Tree</span>
+          <button class="code-copy" data-code="project-structure">Copy</button>
+        </div>
+        <pre>civic-care-frontend/         <span class="tok-comment"># github.com/daathwi/civic-care-frontend</span>
+├── lib/                      <span class="tok-comment"># Flutter app source</span>
+│   ├── core/                 <span class="tok-comment"># Theme, API client, config</span>
+│   ├── models/               <span class="tok-comment"># Data models (Complaint, User, Ward...)</span>
+│   ├── providers/            <span class="tok-comment"># Riverpod state providers</span>
+│   ├── repository/           <span class="tok-comment"># Data access layer</span>
+│   ├── screens/              <span class="tok-comment"># All UI screens</span>
+│   │   ├── officer/          <span class="tok-comment"># Manager & worker screens</span>
+│   │   ├── complaint_detail/ <span class="tok-comment"># Complaint detail parts</span>
+│   │   └── drawer/           <span class="tok-comment"># About, FAQ, Contact, Helpline</span>
+│   ├── widgets/              <span class="tok-comment"># Shared UI components</span>
+│   ├── utils/                <span class="tok-comment"># Responsive utilities</span>
+│   └── main.dart             <span class="tok-comment"># App entry point</span>
+├── docs/                     <span class="tok-comment"># This documentation</span>
+└── pubspec.yaml              <span class="tok-comment"># Flutter dependencies</span>
+
+civic-care-backend/          <span class="tok-comment"># github.com/daathwi/civic-care-backend</span>
+├── routers/                  <span class="tok-comment"># Domain API routers</span>
+├── models/                   <span class="tok-comment"># SQLAlchemy models</span>
+├── schemas/                  <span class="tok-comment"># Pydantic request/response schemas</span>
+├── ai/                       <span class="tok-comment"># AI modules (MCP server)</span>
+└── pyproject.toml            <span class="tok-comment"># Python project config</span></pre>
+      </div>
+    </section>
+
+    <!-- ====== INSTALLATION ====== -->
+    <section class="doc-section" id="installation">
+      <div class="section-label"><span class="label-line"></span> Setup</div>
+      <h2>Installation</h2>
+      <p class="section-desc">Step-by-step guide to set up both the mobile app and the backend server.</p>
+
+      <div class="tabs" id="installation-tabs">
+        <div class="tab-buttons">
+          <button type="button" class="tab-btn active" data-tab="flutter-setup" onclick="switchInstallTab(this)">Flutter App</button>
+          <button type="button" class="tab-btn" data-tab="backend-setup" onclick="switchInstallTab(this)">Backend Server</button>
+          <button type="button" class="tab-btn" data-tab="ai-setup" onclick="switchInstallTab(this)">AI Module</button>
+        </div>
+
+        <div class="tab-panel active" id="flutter-setup">
+          <h4>1. Clone & install dependencies</h4>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">Shell</span>
+              <button class="code-copy">Copy</button>
+            </div>
+            <pre><span class="tok-func">git clone</span> https://github.com/daathwi/civic-care-frontend.git
+<span class="tok-func">cd</span> civic-care-frontend
+<span class="tok-func">flutter pub get</span></pre>
+          </div>
+
+          <h4>2. Configure the API URL</h4>
+          <p>On first launch, you'll see the API Configuration screen. Enter your backend URL (default: <code>http://10.0.2.2:8000</code> for Android emulator).</p>
+
+          <h4>3. Run the app</h4>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">Shell</span>
+              <button class="code-copy">Copy</button>
+            </div>
+            <pre><span class="tok-comment"># For Android</span>
+<span class="tok-func">flutter run</span>
+
+<span class="tok-comment"># For Web</span>
+<span class="tok-func">flutter run</span> -d chrome
+
+<span class="tok-comment"># For iOS</span>
+<span class="tok-func">flutter run</span> -d ios</pre>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="backend-setup">
+          <h4>1. Setup Python environment</h4>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">Shell</span>
+              <button class="code-copy">Copy</button>
+            </div>
+            <pre><span class="tok-func">git clone</span> https://github.com/daathwi/civic-care-backend.git
+<span class="tok-func">cd</span> civic-care-backend
+<span class="tok-func">uv venv</span> && <span class="tok-func">source</span> .venv/bin/activate
+<span class="tok-func">uv pip install</span> -r requirements.txt</pre>
+          </div>
+
+          <h4>2. Configure PostgreSQL</h4>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">Shell</span>
+              <button class="code-copy">Copy</button>
+            </div>
+            <pre><span class="tok-comment"># Create the database</span>
+<span class="tok-func">createdb</span> civiccare
+
+<span class="tok-comment"># Set environment variable</span>
+<span class="tok-keyword">export</span> DATABASE_URL=<span class="tok-string">"postgresql+asyncpg://user:pass@localhost/civiccare"</span></pre>
+          </div>
+
+          <h4>3. Run the server</h4>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">Shell</span>
+              <button class="code-copy">Copy</button>
+            </div>
+            <pre><span class="tok-func">uvicorn</span> main:app --host <span class="tok-number">0.0.0.0</span> --port <span class="tok-number">8000</span> --reload</pre>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="ai-setup">
+          <h4>1. Install Ollama</h4>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">Shell</span>
+              <button class="code-copy">Copy</button>
+            </div>
+            <pre><span class="tok-comment"># macOS / Linux</span>
+<span class="tok-func">curl</span> -fsSL https://ollama.com/install.sh | sh
+
+<span class="tok-comment"># Pull the LLaMA model</span>
+<span class="tok-func">ollama pull</span> llama3.2:7b</pre>
+          </div>
+
+          <h4>2. Verify the AI module</h4>
+          <p>The MCP (Model Context Protocol) server connects to Ollama's local API. Ensure Ollama is running on port <code>11434</code> before starting the backend.</p>
+
+          <div class="callout warning">
+            <span class="callout-icon">⚠️</span>
+            <div>
+              <strong>Security Note:</strong> CivicCare uses a locally hosted LLaMA 3.2-7B model via Ollama. No data is sent to external AI services, ensuring complete data sovereignty and privacy compliance.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== ARCHITECTURE ====== -->
+    <section class="doc-section" id="architecture">
+      <div class="section-label"><span class="label-line"></span> System Design</div>
+      <h2>Architecture</h2>
+      <p class="section-desc">CivicCare follows a modular, layered architecture designed for scalability, security, and real-time communication.</p>
+
+      <div class="arch-diagram fade-in">
+        <div class="arch-layers">
+          <div class="arch-layer frontend">
+            <div class="arch-layer-label">Presentation Layer</div>
+            <strong>Flutter Mobile & Web App</strong> — Riverpod State · Responsive UI · Role-Based Partitioning
+          </div>
+          <div class="arch-connector">↕ REST API + WebSockets (JWT)</div>
+          <div class="arch-layer backend">
+            <div class="arch-layer-label">Application Layer</div>
+            <strong>FastAPI Server</strong> — Domain Routers · Pydantic Validation · RBAC · Event Tracker
+          </div>
+          <div class="arch-connector">↕ Ollama API + MCP Protocol</div>
+          <div class="arch-layer ai">
+            <div class="arch-layer-label">Intelligence Layer</div>
+            <strong>AI/MCP Server</strong> — LLaMA 3.2-7B · Contextual Filtering · Task Reasoning · Semantic Search
+          </div>
+          <div class="arch-connector">↕ SQLAlchemy Async Sessions</div>
+          <div class="arch-layer db">
+            <div class="arch-layer-label">Data Layer</div>
+            <strong>PostgreSQL</strong> — Users · Grievances · Wards · Departments · Events · Conversations
+          </div>
+        </div>
+      </div>
+
+      <h3>Frontend Architecture (Flutter)</h3>
+      <div class="card-grid cols-3">
+        <div class="card">
+          <h4>Presentation Layer</h4>
+          <p>Role-based UI partitioning with atomic widgets, feature modules (voice recording, map hub), and responsive breakpoints (mobile &lt; 600px, tablet 600–1200px, desktop ≥ 1200px).</p>
+        </div>
+        <div class="card">
+          <h4>State & Logic Layer</h4>
+          <p>Riverpod providers per domain (auth, complaints, workers, wards). Reactive subscriptions ensure real-time UI updates when data changes.</p>
+        </div>
+        <div class="card">
+          <h4>Data Access Layer</h4>
+          <p>Repository pattern abstracts data fetching. API client with retry logic, multipart upload support, and JWT token refresh.</p>
+        </div>
+      </div>
+
+      <h3>Backend Architecture (FastAPI)</h3>
+      <div class="card-grid cols-3">
+        <div class="card">
+          <h4>Domain Routers</h4>
+          <p>Independent APIRouter modules per feature set, composed into a unified API surface with <code>/api/v1</code> prefix.</p>
+        </div>
+        <div class="card">
+          <h4>Pydantic Validation</h4>
+          <p>Strict request/response schemas ensure data safety and auto-generated OpenAPI documentation.</p>
+        </div>
+        <div class="card">
+          <h4>Async Database</h4>
+          <p>SQLAlchemy async sessions for non-blocking PostgreSQL connections. GeoJSON for ward boundaries.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== TECH STACK ====== -->
+    <section class="doc-section" id="tech-stack">
+      <div class="section-label"><span class="label-line"></span> Technologies</div>
+      <h2>Tech Stack</h2>
+      <p class="section-desc">Built with modern, production-ready technologies across every layer.</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Layer</th>
+              <th>Technology</th>
+              <th>Purpose</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge blue">Frontend</span></td>
+              <td><strong>Flutter</strong> + Dart</td>
+              <td>Cross-platform mobile & web UI</td>
+            </tr>
+            <tr>
+              <td><span class="badge blue">Frontend</span></td>
+              <td><strong>Riverpod</strong></td>
+              <td>Reactive state management</td>
+            </tr>
+            <tr>
+              <td><span class="badge blue">Frontend</span></td>
+              <td><strong>flutter_map</strong> + OSM</td>
+              <td>Interactive mapping with OpenStreetMap tiles</td>
+            </tr>
+            <tr>
+              <td><span class="badge blue">Frontend</span></td>
+              <td><strong>fl_chart</strong></td>
+              <td>Dashboard charts and analytics</td>
+            </tr>
+            <tr>
+              <td><span class="badge teal">Backend</span></td>
+              <td><strong>FastAPI</strong></td>
+              <td>High-performance async API framework</td>
+            </tr>
+            <tr>
+              <td><span class="badge teal">Backend</span></td>
+              <td><strong>SQLAlchemy</strong> (async)</td>
+              <td>ORM with async PostgreSQL support</td>
+            </tr>
+            <tr>
+              <td><span class="badge teal">Backend</span></td>
+              <td><strong>JWT + RBAC</strong></td>
+              <td>Token-based auth with role-based access control</td>
+            </tr>
+            <tr>
+              <td><span class="badge teal">Backend</span></td>
+              <td><strong>WebSockets</strong></td>
+              <td>Real-time comments and internal messaging</td>
+            </tr>
+            <tr>
+              <td><span class="badge orange">Database</span></td>
+              <td><strong>PostgreSQL</strong></td>
+              <td>Primary relational database</td>
+            </tr>
+            <tr>
+              <td><span class="badge orange">Database</span></td>
+              <td><strong>GeoJSON</strong></td>
+              <td>Ward boundary definitions</td>
+            </tr>
+            <tr>
+              <td><span class="badge red">AI</span></td>
+              <td><strong>LLaMA 3.2-7B</strong></td>
+              <td>Local LLM via Ollama for privacy</td>
+            </tr>
+            <tr>
+              <td><span class="badge red">AI</span></td>
+              <td><strong>MCP Server</strong></td>
+              <td>Model Context Protocol for AI tool orchestration</td>
+            </tr>
+            <tr>
+              <td><span class="badge gray">Admin</span></td>
+              <td><strong>HTML/CSS/JS</strong></td>
+              <td>Admin dashboard bundles</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ====== USER ROLES ====== -->
+    <section class="doc-section" id="user-roles">
+      <div class="section-label"><span class="label-line"></span> Access Control</div>
+      <h2>User Roles</h2>
+      <p class="section-desc">CivicCare implements role-based access control (RBAC), adapting the entire interface and available actions per user role.</p>
+
+      <div class="card-grid cols-2 stagger fade-in">
+        <div class="card role-card">
+          <div class="role-header">
+            <div class="role-avatar citizen">👤</div>
+            <div>
+              <div class="role-name">Citizen</div>
+              <span class="badge blue">Public User</span>
+            </div>
+          </div>
+          <ul class="role-permissions">
+            <li>Report grievances with photo, GPS, and voice evidence</li>
+            <li>Track complaint status in real-time</li>
+            <li>View ward community feed</li>
+            <li>Upvote and comment on grievances</li>
+            <li>Rate resolution quality (1-5 stars)</li>
+            <li>View interactive grievance map</li>
+            <li>Access MCD helpline and contact info</li>
+          </ul>
+        </div>
+
+        <div class="card role-card">
+          <div class="role-header">
+            <div class="role-avatar manager">📋</div>
+            <div>
+              <div class="role-name">Field Manager</div>
+              <span class="badge teal">Department Staff</span>
+            </div>
+          </div>
+          <ul class="role-permissions">
+            <li>Dashboard with KPIs, maps, and grievance overview</li>
+            <li>View all ward grievances with filtering</li>
+            <li>Assign field workers to tasks (AI-suggested)</li>
+            <li>Manage workforce directory</li>
+            <li>Handle escalated grievances</li>
+            <li>Access internal staff messaging</li>
+            <li>Switch to citizen portal view</li>
+          </ul>
+        </div>
+
+        <div class="card role-card">
+          <div class="role-header">
+            <div class="role-avatar assistant">🔧</div>
+            <div>
+              <div class="role-name">Field Assistant</div>
+              <span class="badge green">Ground Worker</span>
+            </div>
+          </div>
+          <ul class="role-permissions">
+            <li>View assigned tasks with priority and details</li>
+            <li>Update task status (In Progress, Resolved)</li>
+            <li>Upload GPS-verified resolution photos</li>
+            <li>Mark attendance</li>
+            <li>Internal staff chat</li>
+            <li>View personal performance analytics</li>
+          </ul>
+        </div>
+
+        <div class="card role-card">
+          <div class="role-header">
+            <div class="role-avatar admin">⚙️</div>
+            <div>
+              <div class="role-name">Admin / Commissioner</div>
+              <span class="badge orange">System Admin</span>
+            </div>
+          </div>
+          <ul class="role-permissions">
+            <li>Full manager dashboard access</li>
+            <li>Real-time ward and city-wide dashboards</li>
+            <li>Escalation and bottleneck detection</li>
+            <li>Performance benchmarks across wards</li>
+            <li>SDG-aligned impact measurement</li>
+            <li>LLM-powered query and report generation</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>Department Structure</h3>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Department</th><th>Manager Role</th><th>Field Role</th><th>Categories</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Sanitation & Waste</strong></td>
+              <td>Sanitary Inspector (SI)</td>
+              <td>Field Worker</td>
+              <td>Overflowing Bin, Street Cleaning, Drain Blockage</td>
+            </tr>
+            <tr>
+              <td><strong>Engineering</strong></td>
+              <td>Assistant Engineer (AE)</td>
+              <td>Junior Engineer</td>
+              <td>Pothole, Road Damage, Street Light, Water Supply</td>
+            </tr>
+            <tr>
+              <td><strong>Public Health</strong></td>
+              <td>Public Health Inspector</td>
+              <td>Health Worker</td>
+              <td>Disease Outbreak, Vector Control, Food Safety</td>
+            </tr>
+            <tr>
+              <td><strong>Horticulture</strong></td>
+              <td>Section Officer (S.O.)</td>
+              <td>Gardener</td>
+              <td>Park Maintenance, Tree Hazard, Green Space</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout info" style="margin-top: 20px;">
+        <span class="callout-icon">➕</span>
+        <div>
+          <strong>Customisation:</strong> You can add custom departments, custom worker roles, field managers, and field assistants to match your municipal structure. Configure departments and categories via the backend; roles and permissions are enforced by RBAC.
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== FEATURES ====== -->
+    <section class="doc-section" id="features">
+      <div class="section-label"><span class="label-line"></span> Capabilities</div>
+      <h2>Features Overview</h2>
+      <p class="section-desc">Every feature in CivicCare is designed as an interconnected link in the chain of accountability.</p>
+
+      <div class="card-grid cols-3 stagger fade-in">
+        <div class="card feature-card">
+          <div class="card-icon teal">📸</div>
+          <h4>Photo + GPS Evidence</h4>
+          <p>Every complaint requires a geotagged photo, creating tamper-proof evidence tied to exact coordinates.</p>
+        </div>
+        <div class="card feature-card">
+          <div class="card-icon blue">🎙</div>
+          <h4>Voice Reporting</h4>
+          <p>Citizens can record voice descriptions for accessibility, eliminating literacy barriers.</p>
+        </div>
+        <div class="card feature-card">
+          <div class="card-icon green">📡</div>
+          <h4>Real-Time Tracking</h4>
+          <p>Live status updates via WebSockets. Every status change triggers timeline events visible to all stakeholders.</p>
+        </div>
+        <div class="card feature-card">
+          <div class="card-icon orange">🗺</div>
+          <h4>Interactive Map Hub</h4>
+          <p>OpenStreetMap-powered map with category and status filters, showing all grievances with detailed sidebars.</p>
+        </div>
+        <div class="card feature-card">
+          <div class="card-icon red">🔒</div>
+          <h4>Sensitive Content Blur</h4>
+          <p>Complaints marked sensitive have blurred images by default, revealed only on explicit tap — protecting privacy.</p>
+        </div>
+        <div class="card feature-card">
+          <div class="card-icon teal">🏆</div>
+          <h4>Gamified Scoring</h4>
+          <p>Civic Impact Score measures citizen participation quality. Workers earn performance recognition for timely resolutions.</p>
+        </div>
+        <div class="card feature-card">
+          <div class="card-icon blue">💬</div>
+          <h4>Community Feed</h4>
+          <p>Ward-level live feed where citizens view, upvote, and comment on neighborhood grievances.</p>
+        </div>
+        <div class="card feature-card">
+          <div class="card-icon green">🌏</div>
+          <h4>Multi-Language Support</h4>
+          <p>Designed for linguistic diversity, ensuring accessibility across Delhi's diverse population.</p>
+        </div>
+        <div class="card feature-card">
+          <div class="card-icon orange">📊</div>
+          <h4>Rich Analytics</h4>
+          <p>Dashboards with fl_chart-powered visualizations for KPIs, resolution rates, and department performance.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== GRIEVANCE FLOW ====== -->
+    <section class="doc-section" id="grievance-flow">
+      <div class="section-label"><span class="label-line"></span> Core Workflow</div>
+      <h2>Grievance Flow</h2>
+      <p class="section-desc">The end-to-end lifecycle of a civic complaint — from citizen report to verified resolution.</p>
+
+      <div class="card fade-in" style="padding: 32px; margin-bottom: 24px;">
+        <div class="flow-steps">
+          <div class="flow-step">
+            <div class="flow-step-num">1</div>
+            <div class="flow-step-title">Report</div>
+            <div class="flow-step-desc">Citizen submits complaint with photo, GPS, and description</div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num">2</div>
+            <div class="flow-step-title">AI Filter</div>
+            <div class="flow-step-desc">AI validates, categorises, and routes to correct department</div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num">3</div>
+            <div class="flow-step-title">Assign</div>
+            <div class="flow-step-desc">AI dispatches optimal field worker with reasoning</div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num">4</div>
+            <div class="flow-step-title">Resolve</div>
+            <div class="flow-step-desc">GPS-verified completion with timestamped proof</div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num">5</div>
+            <div class="flow-step-title">Insights</div>
+            <div class="flow-step-desc">AI analytics feed admin dashboards and SDG metrics</div>
+          </div>
+        </div>
+      </div>
+
+      <h3>Filing a Complaint (3-Step Flow)</h3>
+      <div class="card-grid cols-3">
+        <div class="card">
+          <span class="badge teal" style="margin-bottom:12px;">Step 1 — Evidence</span>
+          <h4>Capture Proof</h4>
+          <p>Take a photo of the issue. GPS location is automatically captured. The ward is inferred via coordinate lookup (<code>/wards/lookup</code>).</p>
+        </div>
+        <div class="card">
+          <span class="badge blue" style="margin-bottom:12px;">Step 2 — Categorise</span>
+          <h4>Department & Category</h4>
+          <p>Select the department (Sanitation, Engineering, Health, Horticulture), subcategory, and priority level (Low, Medium, High).</p>
+        </div>
+        <div class="card">
+          <span class="badge green" style="margin-bottom:12px;">Step 3 — Describe</span>
+          <h4>Details & Submit</h4>
+          <p>Add title, description, and optional voice recording. Toggle sensitive content flag if needed. Submit for review.</p>
+        </div>
+      </div>
+
+      <h3>Status Lifecycle</h3>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Status</th><th>Badge</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>incompleteUnassigned</code></td><td><span class="badge orange">Pending</span></td><td>Filed but not yet assigned to a worker</td></tr>
+            <tr><td><code>incompleteAssigned</code></td><td><span class="badge blue">Assigned</span></td><td>Worker assigned, awaiting field action</td></tr>
+            <tr><td><code>ongoing</code></td><td><span class="badge teal">In Progress</span></td><td>Worker actively resolving the issue</td></tr>
+            <tr><td><code>completed</code></td><td><span class="badge green">Resolved</span></td><td>Resolution photo uploaded, GPS-verified closure</td></tr>
+            <tr><td><code>escalated</code></td><td><span class="badge red">Escalated</span></td><td>Unresolved within SLA, escalated to higher authority</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout info">
+        <span class="callout-icon">🔄</span>
+        <div>
+          <strong>Reopen Mechanism:</strong> If a citizen is unsatisfied, they can reopen a resolved complaint. The <code>reopenCount</code> tracks how many times a grievance has been reopened, feeding into the department's Resolution Integrity score.
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== AI INTEGRATION ====== -->
+    <section class="doc-section" id="ai-integration">
+      <div class="section-label"><span class="label-line"></span> Intelligence Layer</div>
+      <h2>AI Integration</h2>
+      <p class="section-desc">Four AI modules power CivicCare's intelligent governance — all running locally via Ollama for maximum data security.</p>
+
+      <div class="card-grid cols-2 stagger fade-in">
+        <div class="card feature-card">
+          <div class="card-icon red">🛡</div>
+          <h4>AI Fraud Detection</h4>
+          <p>Identifies and flags fake, duplicate, or non-civic complaints before they enter the system. Prevents jurisdictional spam and reduces misrouting bottlenecks.</p>
+          <div style="margin-top:12px;">
+            <span class="badge red">Spam Prevention</span>
+            <span class="badge orange">Duplicate Detection</span>
+          </div>
+        </div>
+        <div class="card feature-card">
+          <div class="card-icon teal">🚀</div>
+          <h4>AI Dynamic Worker Dispatch</h4>
+          <p>Assigns the most suitable field worker based on location proximity, expertise match, current workload, and historical performance — with transparent reasoning.</p>
+          <div style="margin-top:12px;">
+            <span class="badge teal">Smart Matching</span>
+            <span class="badge green">With Reasoning</span>
+          </div>
+        </div>
+        <div class="card feature-card">
+          <div class="card-icon blue">📈</div>
+          <h4>AI Data Insights</h4>
+          <p>Analyses complaint patterns to reveal trends, seasonal spikes, recurring hotspots, and department performance gaps — feeding into the analytics dashboard.</p>
+          <div style="margin-top:12px;">
+            <span class="badge blue">Pattern Analysis</span>
+            <span class="badge teal">Trend Detection</span>
+          </div>
+        </div>
+        <div class="card feature-card">
+          <div class="card-icon orange">💬</div>
+          <h4>LLM Admin Assistant</h4>
+          <p>Helps administrators query data in natural language and generate reports quickly. Powered by the MCP Server for structured tool access.</p>
+          <div style="margin-top:12px;">
+            <span class="badge orange">Natural Language</span>
+            <span class="badge blue">MCP Protocol</span>
+          </div>
+        </div>
+      </div>
+
+      <h3>AI Architecture: MCP Server</h3>
+      <p>The AI module is built as an MCP (Model Context Protocol) server, providing structured tool access to the LLM. This enables the AI to query databases, analyse patterns, and generate insights through well-defined tool interfaces.</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Architecture</span>
+        </div>
+        <pre><span class="tok-comment">┌─────────────────────────────────────────────────────────┐</span>
+<span class="tok-comment">│</span>  <span class="tok-keyword">MCP Server</span>                                             <span class="tok-comment">│</span>
+<span class="tok-comment">│</span>  ├── <span class="tok-type">Contextual Filtering</span>   → Spam & fraud detection   <span class="tok-comment">│</span>
+<span class="tok-comment">│</span>  ├── <span class="tok-type">Task Allocation</span>        → Worker dispatch + reason   <span class="tok-comment">│</span>
+<span class="tok-comment">│</span>  ├── <span class="tok-type">Reasoning Module</span>       → Decision explanations      <span class="tok-comment">│</span>
+<span class="tok-comment">│</span>  ├── <span class="tok-type">Semantic Search</span>        → Natural language queries    <span class="tok-comment">│</span>
+<span class="tok-comment">│</span>  └── <span class="tok-type">Synthesis</span>              → Report generation          <span class="tok-comment">│</span>
+<span class="tok-comment">│</span>                                                          <span class="tok-comment">│</span>
+<span class="tok-comment">│</span>  <span class="tok-func">Ollama API</span> ←→ <span class="tok-string">LLaMA 3.2-7B</span> (Local, No External Calls)   <span class="tok-comment">│</span>
+<span class="tok-comment">└─────────────────────────────────────────────────────────┘</span></pre>
+      </div>
+
+      <div class="callout success">
+        <span class="callout-icon">🔐</span>
+        <div>
+          <strong>Data Sovereignty:</strong> All AI processing happens locally using LLaMA 3.2-7B via Ollama. No complaint data, citizen information, or operational details are ever transmitted to external cloud AI services.
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== COMMUNITY ====== -->
+    <section class="doc-section" id="community">
+      <div class="section-label"><span class="label-line"></span> Social Layer</div>
+      <h2>Community & Feed</h2>
+      <p class="section-desc">CivicCare transforms civic engagement into active community participation through its ward-level social features.</p>
+
+      <div class="card-grid cols-2">
+        <div class="card">
+          <div class="card-icon blue">📢</div>
+          <h4>Ward Feed</h4>
+          <p>A live, ward-specific feed showing all grievances in your neighborhood. Citizens can scroll through complaints, see statuses, and engage with their community's issues.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon green">👍</div>
+          <h4>Voting System</h4>
+          <p>Upvote or downvote grievances to signal community priority. High-vote complaints surface faster and may influence assignment urgency.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon teal">💬</div>
+          <h4>Live Comments</h4>
+          <p>Real-time WebSocket-powered comments on every grievance. Citizens, managers, and workers can discuss, clarify, and update in a threaded conversation.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon orange">⭐</div>
+          <h4>Resolution Rating</h4>
+          <p>After a grievance is resolved, citizens rate the quality of resolution on a 1-5 scale. Ratings feed into department and worker performance metrics.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== SDG IMPACT ====== -->
+    <section class="doc-section" id="sdg-impact">
+      <div class="section-label"><span class="label-line"></span> Sustainability</div>
+      <h2>SDG & Impact Metrics</h2>
+      <p class="section-desc">CivicCare maps departmental performance directly to UN Sustainable Development Goals, turning grievance resolution into measurable civic impact.</p>
+
+      <h3>Departmental Performance Index (DPI)</h3>
+      <p>A composite score that quantifies how efficiently a department serves citizens:</p>
+
+      <div class="card-grid cols-2 stagger fade-in">
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+            <span class="badge green">RE</span>
+            <h4 style="margin:0;">Resolution Efficiency</h4>
+          </div>
+          <p>Ratio of successfully resolved complaints to total received. Measures raw output effectiveness.</p>
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+            <span class="badge blue">SLA</span>
+            <h4 style="margin:0;">Service Velocity</h4>
+          </div>
+          <p>Percentage of complaints resolved within the 48-hour SLA window. Tracks speed of response.</p>
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+            <span class="badge orange">CH</span>
+            <h4 style="margin:0;">Caseload Health</h4>
+          </div>
+          <p>How well a department keeps its pending caseload under control. Prevents bottleneck accumulation.</p>
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+            <span class="badge teal">RI</span>
+            <h4 style="margin:0;">Resolution Integrity</h4>
+          </div>
+          <p>First-time fix rate — how often complaints are resolved correctly without rework or reopening.</p>
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+            <span class="badge red">EM</span>
+            <h4 style="margin:0;">Escalation Mitigation</h4>
+          </div>
+          <p>How well the department handles problems internally without needing to escalate to higher authorities.</p>
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+            <span class="badge gray">DPI</span>
+            <h4 style="margin:0;">Overall DPI Score</h4>
+          </div>
+          <p>Weighted composite of all five metrics. Directly maps to SDG achievement at the ward and city level.</p>
+        </div>
+      </div>
+
+      <h3>Civic Impact Score</h3>
+      <p>Measures the quality of citizen participation to encourage constructive engagement:</p>
+      <div class="card" style="margin-bottom: 24px;">
+        <div class="table-wrapper" style="margin: 0; border: none;">
+          <table>
+            <thead>
+              <tr><th>Factor</th><th>Effect</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><strong>Complaint Accuracy</strong></td><td><span class="badge green">+ Score</span></td><td>Correctly filled, relevant civic complaints</td></tr>
+              <tr><td><strong>Interaction Quality</strong></td><td><span class="badge green">+ Score</span></td><td>Meaningful upvotes and constructive comments</td></tr>
+              <tr><td><strong>Invalid Entry Penalty</strong></td><td><span class="badge red">− Score</span></td><td>AI-flagged wrong or irrelevant submissions</td></tr>
+              <tr><td><strong>Low-Quality Penalty</strong></td><td><span class="badge red">− Score</span></td><td>Abusive or spammy comments and interactions</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== API REFERENCE ====== -->
+    <section class="doc-section" id="api-reference">
+      <div class="section-label"><span class="label-line"></span> Developer Reference</div>
+      <h2>API Reference</h2>
+      <p class="section-desc">RESTful API with <code>/api/v1</code> prefix. All endpoints return JSON. Authentication via JWT Bearer tokens.</p>
+
+      <div class="callout info">
+        <span class="callout-icon">🔑</span>
+        <div>
+          <strong>Authentication:</strong> Include <code>Authorization: Bearer &lt;token&gt;</code> in all authenticated requests. Tokens are obtained via <code>/auth/login</code> and refreshed via <code>/auth/refresh</code>.
+        </div>
+      </div>
+
+      <h3>Authentication</h3>
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpointRow(this)" role="button" tabindex="0">
+          <span class="method-badge post">POST</span>
+          <span class="endpoint-path">/auth/register</span>
+          <span class="endpoint-desc">Register a new citizen account</span>
+          <span class="endpoint-toggle">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Body:</strong> <code>{ name, email, password, phone }</code></p>
+          <p><strong>Returns:</strong> User profile with JWT access and refresh tokens.</p>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpointRow(this)" role="button" tabindex="0">
+          <span class="method-badge post">POST</span>
+          <span class="endpoint-path">/auth/login</span>
+          <span class="endpoint-desc">Login (citizen or department staff)</span>
+          <span class="endpoint-toggle">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Body:</strong> <code>{ email, password }</code></p>
+          <p><strong>Returns:</strong> JWT tokens and user profile including role, department, and ward assignments.</p>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpointRow(this)" role="button" tabindex="0">
+          <span class="method-badge post">POST</span>
+          <span class="endpoint-path">/auth/refresh</span>
+          <span class="endpoint-desc">Refresh an expired access token</span>
+          <span class="endpoint-toggle">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Body:</strong> <code>{ refresh_token }</code></p>
+          <p><strong>Returns:</strong> New access token.</p>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpointRow(this)" role="button" tabindex="0">
+          <span class="method-badge get">GET</span>
+          <span class="endpoint-path">/auth/me</span>
+          <span class="endpoint-desc">Get current authenticated user</span>
+          <span class="endpoint-toggle">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Headers:</strong> Requires Bearer token.</p>
+          <p><strong>Returns:</strong> Full user profile including role, department, ward, tasks completed, and tasks active counts.</p>
+        </div>
+      </div>
+
+      <h3>Grievances</h3>
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpointRow(this)" role="button" tabindex="0">
+          <span class="method-badge get">GET</span>
+          <span class="endpoint-path">/grievances</span>
+          <span class="endpoint-desc">List grievances (paginated, filterable)</span>
+          <span class="endpoint-toggle">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Query Params:</strong></p>
+          <p><code>ward_id</code>, <code>status</code>, <code>priority</code>, <code>category_dept</code>, <code>reporter_id</code>, <code>worker_id</code>, <code>page</code>, <code>limit</code></p>
+          <p><strong>Returns:</strong> Paginated list of grievances with complaint details, assignment info, and vote counts.</p>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpointRow(this)" role="button" tabindex="0">
+          <span class="method-badge post">POST</span>
+          <span class="endpoint-path">/grievances</span>
+          <span class="endpoint-desc">Create a new grievance</span>
+          <span class="endpoint-toggle">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Body:</strong> Multipart — includes title, description, category, subcategory, priority, lat, lng, address, ward, photo (file), audio (file, optional), isSensitive flag.</p>
+          <p><strong>Returns:</strong> Created grievance with ID and initial status (<code>incompleteUnassigned</code>).</p>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpointRow(this)" role="button" tabindex="0">
+          <span class="method-badge get">GET</span>
+          <span class="endpoint-path">/grievances/:id</span>
+          <span class="endpoint-desc">Get grievance details</span>
+          <span class="endpoint-toggle">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Returns:</strong> Full grievance with timeline events, comments, assigned worker details, resolution image, and rating.</p>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpointRow(this)" role="button" tabindex="0">
+          <span class="method-badge patch">PATCH</span>
+          <span class="endpoint-path">/grievances/:id</span>
+          <span class="endpoint-desc">Update grievance (status, priority, resolution)</span>
+          <span class="endpoint-toggle">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Body:</strong> <code>{ status, priority, resolutionImage }</code> (partial update)</p>
+          <p><strong>Permissions:</strong> Managers can update priority/status. Workers can update status and add resolution image.</p>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpointRow(this)" role="button" tabindex="0">
+          <span class="method-badge post">POST</span>
+          <span class="endpoint-path">/grievances/:id/assign</span>
+          <span class="endpoint-desc">Assign a field worker</span>
+          <span class="endpoint-toggle">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Body:</strong> <code>{ worker_id }</code></p>
+          <p><strong>Permissions:</strong> Field Managers only.</p>
+          <p><strong>Effect:</strong> Status changes to <code>incompleteAssigned</code>. Worker receives the task in their dashboard.</p>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpointRow(this)" role="button" tabindex="0">
+          <span class="method-badge post">POST</span>
+          <span class="endpoint-path">/grievances/:id/vote</span>
+          <span class="endpoint-desc">Vote on a grievance</span>
+          <span class="endpoint-toggle">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Body:</strong> <code>{ vote: 1 | -1 | 0 }</code> (upvote, downvote, or remove vote)</p>
+          <p><strong>Permissions:</strong> Citizens only.</p>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpointRow(this)" role="button" tabindex="0">
+          <span class="method-badge post">POST</span>
+          <span class="endpoint-path">/grievances/:id/rate</span>
+          <span class="endpoint-desc">Rate a resolved grievance</span>
+          <span class="endpoint-toggle">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Body:</strong> <code>{ rating: 1-5 }</code></p>
+          <p><strong>Permissions:</strong> Original reporter only, after status is <code>completed</code>.</p>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpointRow(this)" role="button" tabindex="0">
+          <span class="method-badge get">GET</span>
+          <span class="endpoint-path">/grievances/:id/comments</span>
+          <span class="endpoint-desc">Get grievance comments</span>
+          <span class="endpoint-toggle">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Returns:</strong> Array of comments with author name, content, and timestamp.</p>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpointRow(this)" role="button" tabindex="0">
+          <span class="method-badge post">POST</span>
+          <span class="endpoint-path">/grievances/:id/comments</span>
+          <span class="endpoint-desc">Post a comment</span>
+          <span class="endpoint-toggle">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Body:</strong> <code>{ content }</code></p>
+          <p><strong>Effect:</strong> Also broadcast via WebSocket to all subscribers of this grievance.</p>
+        </div>
+      </div>
+
+      <h3>Upload</h3>
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpointRow(this)" role="button" tabindex="0">
+          <span class="method-badge post">POST</span>
+          <span class="endpoint-path">/upload/grievance-photo</span>
+          <span class="endpoint-desc">Upload a grievance photo</span>
+          <span class="endpoint-toggle">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Body:</strong> Multipart file upload.</p>
+          <p><strong>Returns:</strong> <code>{ url }</code> — path to the stored image.</p>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpointRow(this)" role="button" tabindex="0">
+          <span class="method-badge post">POST</span>
+          <span class="endpoint-path">/upload/resolution-photo</span>
+          <span class="endpoint-desc">Upload a resolution proof photo</span>
+          <span class="endpoint-toggle">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Body:</strong> Multipart file upload. Requires worker auth.</p>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpointRow(this)" role="button" tabindex="0">
+          <span class="method-badge post">POST</span>
+          <span class="endpoint-path">/upload/grievance-audio</span>
+          <span class="endpoint-desc">Upload a voice recording</span>
+          <span class="endpoint-toggle">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Body:</strong> Multipart audio file upload.</p>
+          <p><strong>Returns:</strong> <code>{ url }</code> — path to the stored audio.</p>
+        </div>
+      </div>
+
+      <h3>Wards & Geography</h3>
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpointRow(this)" role="button" tabindex="0">
+          <span class="method-badge get">GET</span>
+          <span class="endpoint-path">/wards</span>
+          <span class="endpoint-desc">List all wards</span>
+          <span class="endpoint-toggle">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Returns:</strong> Array of wards with ID, name, zone, and GeoJSON boundaries.</p>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpointRow(this)" role="button" tabindex="0">
+          <span class="method-badge get">GET</span>
+          <span class="endpoint-path">/wards/lookup?lat=&amp;lng=</span>
+          <span class="endpoint-desc">Lookup ward by coordinates</span>
+          <span class="endpoint-toggle">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Query Params:</strong> <code>lat</code>, <code>lng</code></p>
+          <p><strong>Returns:</strong> Ward that contains the given GPS coordinates. Used during complaint filing to auto-assign ward.</p>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpointRow(this)" role="button" tabindex="0">
+          <span class="method-badge get">GET</span>
+          <span class="endpoint-path">/zones</span>
+          <span class="endpoint-desc">List all zones</span>
+          <span class="endpoint-toggle">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Returns:</strong> Array of MCD zones.</p>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpointRow(this)" role="button" tabindex="0">
+          <span class="method-badge get">GET</span>
+          <span class="endpoint-path">/departments</span>
+          <span class="endpoint-desc">List all departments</span>
+          <span class="endpoint-toggle">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Returns:</strong> Array of departments with ID, name, and display name.</p>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpointRow(this)" role="button" tabindex="0">
+          <span class="method-badge get">GET</span>
+          <span class="endpoint-path">/categories</span>
+          <span class="endpoint-desc">List all complaint categories</span>
+          <span class="endpoint-toggle">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Returns:</strong> All categories and subcategories grouped by department.</p>
+        </div>
+      </div>
+
+      <h3>Workers</h3>
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpointRow(this)" role="button" tabindex="0">
+          <span class="method-badge get">GET</span>
+          <span class="endpoint-path">/workers</span>
+          <span class="endpoint-desc">List field workers</span>
+          <span class="endpoint-toggle">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Returns:</strong> Array of workers with name, department, ward, active/completed task counts.</p>
+        </div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpointRow(this)" role="button" tabindex="0">
+          <span class="method-badge get">GET</span>
+          <span class="endpoint-path">/workers/:id</span>
+          <span class="endpoint-desc">Get worker details and performance</span>
+          <span class="endpoint-toggle">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Returns:</strong> Worker profile with performance analytics, task history, and department info.</p>
+        </div>
+      </div>
+
+      <h3>Internal Messaging</h3>
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpointRow(this)" role="button" tabindex="0">
+          <span class="method-badge get">GET</span>
+          <span class="endpoint-path">/internal-messages/conversations</span>
+          <span class="endpoint-desc">List staff conversations</span>
+          <span class="endpoint-toggle">▼</span>
+        </div>
+        <div class="endpoint-body">
+          <p><strong>Permissions:</strong> Staff roles only (Manager, Assistant, Admin).</p>
+          <p><strong>Returns:</strong> List of conversations with members and last message preview.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== DATA MODELS ====== -->
+    <section class="doc-section" id="data-models">
+      <div class="section-label"><span class="label-line"></span> Schema Reference</div>
+      <h2>Data Models</h2>
+      <p class="section-desc">Core data structures used across the platform.</p>
+
+      <h3>Complaint</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Model Schema</span>
+          <button class="code-copy">Copy</button>
+        </div>
+        <pre><span class="tok-type">Complaint</span> {
+  <span class="tok-keyword">id</span>:                   <span class="tok-type">String</span>        <span class="tok-comment">// Unique identifier</span>
+  <span class="tok-keyword">title</span>:                <span class="tok-type">String</span>        <span class="tok-comment">// Brief complaint title</span>
+  <span class="tok-keyword">description</span>:          <span class="tok-type">String</span>        <span class="tok-comment">// Detailed description</span>
+  <span class="tok-keyword">imagePath</span>:            <span class="tok-type">String</span>        <span class="tok-comment">// Evidence photo URL</span>
+  <span class="tok-keyword">audioPath</span>:            <span class="tok-type">String?</span>       <span class="tok-comment">// Voice recording URL (optional)</span>
+  <span class="tok-keyword">lat</span>:                  <span class="tok-type">Double</span>        <span class="tok-comment">// GPS latitude</span>
+  <span class="tok-keyword">lng</span>:                  <span class="tok-type">Double</span>        <span class="tok-comment">// GPS longitude</span>
+  <span class="tok-keyword">address</span>:              <span class="tok-type">String</span>        <span class="tok-comment">// Resolved address</span>
+  <span class="tok-keyword">ward</span>:                 <span class="tok-type">String</span>        <span class="tok-comment">// Ward name (auto-resolved)</span>
+  <span class="tok-keyword">status</span>:               <span class="tok-type">ComplaintStatus</span>
+  <span class="tok-keyword">category</span>:             <span class="tok-type">Category</span>      <span class="tok-comment">// sanitation | engineering | health | horticulture | assets | other</span>
+  <span class="tok-keyword">subCategory</span>:          <span class="tok-type">String</span>
+  <span class="tok-keyword">priority</span>:             <span class="tok-type">Priority</span>      <span class="tok-comment">// low | medium | high</span>
+  <span class="tok-keyword">date</span>:                 <span class="tok-type">DateTime</span>
+  <span class="tok-keyword">userName</span>:             <span class="tok-type">String</span>        <span class="tok-comment">// Reporter name</span>
+  <span class="tok-keyword">reporterId</span>:           <span class="tok-type">String</span>
+  <span class="tok-keyword">reporterPhone</span>:        <span class="tok-type">String?</span>
+  <span class="tok-keyword">upvotes</span>:              <span class="tok-type">Int</span>
+  <span class="tok-keyword">downvotes</span>:            <span class="tok-type">Int</span>
+  <span class="tok-keyword">comments</span>:             <span class="tok-type">List&lt;Comment&gt;</span>
+  <span class="tok-keyword">events</span>:               <span class="tok-type">List&lt;ComplaintEvent&gt;</span>  <span class="tok-comment">// Timeline entries</span>
+  <span class="tok-keyword">assignedTo</span>:           <span class="tok-type">String?</span>       <span class="tok-comment">// Worker name</span>
+  <span class="tok-keyword">assignedToId</span>:         <span class="tok-type">String?</span>
+  <span class="tok-keyword">workerContact</span>:        <span class="tok-type">String?</span>
+  <span class="tok-keyword">resolutionImagePath</span>:  <span class="tok-type">String?</span>       <span class="tok-comment">// GPS-verified proof</span>
+  <span class="tok-keyword">isSensitive</span>:          <span class="tok-type">Bool</span>          <span class="tok-comment">// Blur flag</span>
+  <span class="tok-keyword">citizenRating</span>:        <span class="tok-type">Int?</span>          <span class="tok-comment">// 1-5 stars</span>
+  <span class="tok-keyword">reopenCount</span>:          <span class="tok-type">Int</span>           <span class="tok-comment">// Times reopened</span>
+  <span class="tok-keyword">departmentDisplayName</span>: <span class="tok-type">String?</span>
+}</pre>
+      </div>
+
+      <h3>User Profile</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Model Schema</span>
+          <button class="code-copy">Copy</button>
+        </div>
+        <pre><span class="tok-type">UserProfile</span> {
+  <span class="tok-keyword">id</span>:              <span class="tok-type">String</span>
+  <span class="tok-keyword">name</span>:            <span class="tok-type">String</span>
+  <span class="tok-keyword">email</span>:           <span class="tok-type">String</span>
+  <span class="tok-keyword">phone</span>:           <span class="tok-type">String?</span>
+  <span class="tok-keyword">role</span>:            <span class="tok-type">UserRole</span>      <span class="tok-comment">// citizen | fieldManager | fieldAssistant | admin</span>
+  <span class="tok-keyword">department</span>:      <span class="tok-type">Department?</span>
+  <span class="tok-keyword">wardId</span>:          <span class="tok-type">String?</span>
+  <span class="tok-keyword">zoneId</span>:          <span class="tok-type">String?</span>
+  <span class="tok-keyword">departmentId</span>:    <span class="tok-type">String?</span>
+  <span class="tok-keyword">tasksCompleted</span>:  <span class="tok-type">Int</span>
+  <span class="tok-keyword">tasksActive</span>:     <span class="tok-type">Int</span>
+}</pre>
+      </div>
+
+      <h3>Other Models</h3>
+      <div class="card-grid cols-3">
+        <div class="card">
+          <h4>Ward</h4>
+          <p><code>id</code>, <code>name</code>, <code>zone</code>, <code>geoBounds</code> (GeoJSON polygon defining ward boundary)</p>
+        </div>
+        <div class="card">
+          <h4>FieldWorker</h4>
+          <p><code>id</code>, <code>name</code>, <code>department</code>, <code>ward</code>, <code>tasksActive</code>, <code>tasksCompleted</code>, <code>contact</code></p>
+        </div>
+        <div class="card">
+          <h4>Comment</h4>
+          <p><code>id</code>, <code>authorName</code>, <code>content</code>, <code>timestamp</code>, <code>authorRole</code></p>
+        </div>
+        <div class="card">
+          <h4>ComplaintEvent</h4>
+          <p><code>type</code> (registered, assigned, in_progress, resolved), <code>timestamp</code>, <code>details</code></p>
+        </div>
+        <div class="card">
+          <h4>InternalMessage</h4>
+          <p><code>id</code>, <code>senderId</code>, <code>content</code>, <code>timestamp</code>, <code>conversationId</code></p>
+        </div>
+        <div class="card">
+          <h4>Department</h4>
+          <p><code>id</code>, <code>name</code>, <code>displayName</code>, <code>categories</code> (list of complaint categories)</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== WEBSOCKETS ====== -->
+    <section class="doc-section" id="websockets">
+      <div class="section-label"><span class="label-line"></span> Real-Time</div>
+      <h2>WebSockets</h2>
+      <p class="section-desc">CivicCare uses WebSocket connections for real-time features that require instant updates.</p>
+
+      <div class="card-grid cols-2">
+        <div class="card">
+          <div class="card-icon teal">💬</div>
+          <h4>Grievance Comments</h4>
+          <div class="code-block" style="margin-top:12px;">
+            <div class="code-header"><span class="code-lang">WebSocket</span></div>
+            <pre><span class="tok-keyword">ws://</span>&lt;host&gt;<span class="tok-string">/ws/grievances/:id/comments</span></pre>
+          </div>
+          <p>Subscribes to live comment updates for a specific grievance. New comments posted via REST are broadcast to all connected clients.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon blue">📨</div>
+          <h4>Staff Chat</h4>
+          <div class="code-block" style="margin-top:12px;">
+            <div class="code-header"><span class="code-lang">WebSocket</span></div>
+            <pre><span class="tok-keyword">ws://</span>&lt;host&gt;<span class="tok-string">/ws/conversations/:id/messages</span></pre>
+          </div>
+          <p>Internal messaging channel for field managers and workers. Enables real-time coordination on active tasks.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== CITIZEN GUIDE ====== -->
+    <section class="doc-section" id="citizen-guide">
+      <div class="section-label"><span class="label-line"></span> User Guide</div>
+      <h2>Citizen Guide</h2>
+      <p class="section-desc">Everything you need to know about using CivicCare as a citizen to report and track civic issues.</p>
+
+      <h3>Getting Started</h3>
+      <div class="card" style="margin-bottom:24px;">
+        <ol style="padding-left:20px; margin:0;">
+          <li style="margin-bottom:12px;"><strong>Register</strong> — Create your account with name, email, phone, and password.</li>
+          <li style="margin-bottom:12px;"><strong>Configure</strong> — On first launch, enter the backend server URL if prompted.</li>
+          <li style="margin-bottom:12px;"><strong>Explore</strong> — You'll land on the <strong>Dashboard</strong> with three main tabs: Dashboard, Community Feed, and My Complaints.</li>
+        </ol>
+      </div>
+
+      <h3>Filing a Complaint</h3>
+      <p>Tap the <strong>+</strong> button on your dashboard to start the 3-step complaint flow:</p>
+      <div class="card-grid cols-3">
+        <div class="card">
+          <h4>📸 Step 1: Evidence</h4>
+          <p>Capture a photo of the civic issue. Your GPS location is automatically recorded. Ensure you're at the location of the problem for accurate ward detection.</p>
+        </div>
+        <div class="card">
+          <h4>🏷 Step 2: Category</h4>
+          <p>Select the department and specific issue category. Set priority (Low/Medium/High). The system will auto-detect the correct ward from your GPS coordinates.</p>
+        </div>
+        <div class="card">
+          <h4>✍️ Step 3: Details</h4>
+          <p>Add a clear title and description. Optionally record a voice note. If the content is sensitive, toggle the blur option before submitting.</p>
+        </div>
+      </div>
+
+      <h3>Tracking Your Complaints</h3>
+      <p>Navigate to <strong>My Complaints</strong> to see all your filed grievances. Filter by status:</p>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
+        <span class="badge gray">All</span>
+        <span class="badge orange">Pending</span>
+        <span class="badge blue">Assigned</span>
+        <span class="badge teal">In Progress</span>
+        <span class="badge green">Resolved</span>
+      </div>
+      <p>Tap any complaint to see the full timeline, assigned worker, comments, and location on the map. Once resolved, rate the resolution quality (1-5 stars).</p>
+
+      <h3>Community Engagement</h3>
+      <p>The <strong>Community Feed</strong> shows all grievances in your ward. You can:</p>
+      <ul style="padding-left:20px; margin-bottom:16px;">
+        <li>Upvote important issues to increase their visibility</li>
+        <li>Comment on grievances to provide additional context</li>
+        <li>Track neighborhood issues that affect you</li>
+      </ul>
+    </section>
+
+    <!-- ====== MANAGER GUIDE ====== -->
+    <section class="doc-section" id="manager-guide">
+      <div class="section-label"><span class="label-line"></span> Manager Guide</div>
+      <h2>Field Manager Guide</h2>
+      <p class="section-desc">How to manage ward-level grievances, assign workers, and monitor performance as a field manager.</p>
+
+      <h3>Manager Dashboard</h3>
+      <p>Your home screen displays key performance indicators, an interactive map of active grievances, and the latest complaints. The four-tab layout provides:</p>
+
+      <div class="card-grid cols-2">
+        <div class="card">
+          <h4>📊 Dashboard</h4>
+          <p>KPIs, area map with grievance markers, recent activity stream, and quick-action buttons for common tasks.</p>
+        </div>
+        <div class="card">
+          <h4>📋 Grievances</h4>
+          <p>Full list of all grievances in your jurisdiction with advanced filtering by status, priority, category, and date.</p>
+        </div>
+        <div class="card">
+          <h4>👷 Workforce</h4>
+          <p>Directory of field workers with search, current workload, and performance indicators. Tap any worker for detailed analytics.</p>
+        </div>
+        <div class="card">
+          <h4>⚠️ Escalations</h4>
+          <p>Grievances that have breached the 48-hour SLA or been manually escalated. Requires immediate attention.</p>
+        </div>
+      </div>
+
+      <h3>Assigning Workers</h3>
+      <p>Open any unassigned grievance and tap <strong>Assign Worker</strong>. The AI suggests optimal workers based on proximity, expertise, and workload — complete with reasoning for the recommendation. You can accept the suggestion or choose manually.</p>
+
+      <div class="callout info">
+        <span class="callout-icon">💡</span>
+        <div>
+          <strong>Pro Tip:</strong> Managers can switch to the citizen portal view to experience the platform from a citizen's perspective, useful for testing and empathising with user experience.
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== WORKER GUIDE ====== -->
+    <section class="doc-section" id="worker-guide">
+      <div class="section-label"><span class="label-line"></span> Worker Guide</div>
+      <h2>Field Worker Guide</h2>
+      <p class="section-desc">Daily workflow for field assistants — receiving tasks, updating progress, and submitting resolution proof.</p>
+
+      <h3>Daily Workflow</h3>
+      <div class="card" style="margin-bottom:24px; padding:28px;">
+        <div class="flow-steps">
+          <div class="flow-step">
+            <div class="flow-step-num">1</div>
+            <div class="flow-step-title">Check In</div>
+            <div class="flow-step-desc">Mark attendance on your dashboard</div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num">2</div>
+            <div class="flow-step-title">View Tasks</div>
+            <div class="flow-step-desc">See assigned grievances sorted by priority</div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num">3</div>
+            <div class="flow-step-title">Resolve</div>
+            <div class="flow-step-desc">Fix the issue and capture GPS-verified photo</div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num">4</div>
+            <div class="flow-step-title">Close</div>
+            <div class="flow-step-desc">Upload proof and mark as completed</div>
+          </div>
+        </div>
+      </div>
+
+      <h3>Task Detail View</h3>
+      <p>Each task shows the complaint photo, location on a map, full description, priority level, and timeline history. You can update the status as you work:</p>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
+        <span class="badge blue">Assigned</span> → <span class="badge teal">In Progress</span> → <span class="badge green">Resolved</span>
+      </div>
+
+      <h3>Internal Chat</h3>
+      <p>Use the staff chat to coordinate with your field manager and other workers. Messages are delivered in real-time via WebSocket.</p>
+    </section>
+
+    <!-- ====== ADMIN GUIDE ====== -->
+    <section class="doc-section" id="admin-guide">
+      <div class="section-label"><span class="label-line"></span> Admin Console</div>
+      <h2>Admin Console</h2>
+      <p class="section-desc">The admin web interface provides city-wide oversight and AI-powered data querying for commissioners, mayors, and ward councillors.</p>
+
+      <div class="card-grid cols-2">
+        <div class="card feature-card">
+          <div class="card-icon orange">📊</div>
+          <h4>City-Wide Dashboards</h4>
+          <p>Aggregate performance metrics across all wards and departments. Compare ward performance, identify bottlenecks, and track trends over time.</p>
+        </div>
+        <div class="card feature-card">
+          <div class="card-icon teal">🤖</div>
+          <h4>LLM Admin Assistant</h4>
+          <p>Query data in natural language: "Show me unresolved sanitation complaints in North Zone from last week." Powered by MCP tools and LLaMA 3.2.</p>
+        </div>
+        <div class="card feature-card">
+          <div class="card-icon blue">📈</div>
+          <h4>SDG Impact Reports</h4>
+          <p>Auto-generated reports mapping departmental performance to Sustainable Development Goals. Export-ready for municipal reporting.</p>
+        </div>
+        <div class="card feature-card">
+          <div class="card-icon red">⚡</div>
+          <h4>Escalation Monitoring</h4>
+          <p>Real-time alerts for SLA breaches. Drill down into specific wards or departments to understand resolution delays.</p>
+        </div>
+      </div>
+
+      <div class="callout warning">
+        <span class="callout-icon">⚠️</span>
+        <div>
+          <strong>Admin Portal:</strong> The admin interface is served as a separate HTML/CSS/JS bundle, accessible via the web. It connects to the same backend API but provides a specialized view for high-level governance.
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== FAQ ====== -->
+    <section class="doc-section" id="faq">
+      <div class="section-label"><span class="label-line"></span> Support</div>
+      <h2>Frequently Asked Questions</h2>
+      <p class="section-desc">Common questions about CivicCare's usage, architecture, and capabilities.</p>
+
+      <div class="accordion">
+        <div class="accordion-item">
+          <button type="button" class="accordion-trigger" onclick="toggleAccordionItem(this)">
+            What makes CivicCare different from existing grievance systems?
+            <span class="chevron">▼</span>
+          </button>
+          <div class="accordion-content">
+            <div class="accordion-body">
+              CivicCare isn't just a digital complaint box. It's an end-to-end ecosystem that combines AI-powered fraud detection, intelligent worker dispatch with transparent reasoning, GPS-verified resolution proof, gamified participation scoring, and real-time SDG mapping. Every complaint moves through a verified pipeline — from submission to AI routing to GPS-locked closure — creating an unbroken chain of accountability.
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <button type="button" class="accordion-trigger" onclick="toggleAccordionItem(this)">
+            Is my data secure? Do you use cloud AI services?
+            <span class="chevron">▼</span>
+          </button>
+          <div class="accordion-content">
+            <div class="accordion-body">
+              Absolutely. CivicCare uses a locally hosted LLaMA 3.2-7B model via Ollama. No data — complaints, citizen information, or operational metrics — is ever sent to external cloud AI services. All AI processing happens on your own infrastructure, ensuring complete data sovereignty and GDPR/privacy compliance.
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <button type="button" class="accordion-trigger" onclick="toggleAccordionItem(this)">
+            What is the 48-hour SLA and what happens if it's breached?
+            <span class="chevron">▼</span>
+          </button>
+          <div class="accordion-content">
+            <div class="accordion-body">
+              CivicCare targets 48-hour resolution for all civic complaints. If a grievance isn't resolved within this window, it's automatically escalated — moving to the Escalations tab in the manager's view and flagged in the admin dashboard. This feeds into the department's Service Velocity (SLA) metric and affects their overall DPI score.
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <button type="button" class="accordion-trigger" onclick="toggleAccordionItem(this)">
+            How does the AI worker dispatch work?
+            <span class="chevron">▼</span>
+          </button>
+          <div class="accordion-content">
+            <div class="accordion-body">
+              When a grievance needs a worker, the AI analyses multiple factors: geographic proximity to the issue, the worker's expertise match for the complaint category, their current workload, and historical performance. It then recommends the optimal worker and provides transparent reasoning — for example, "Assigned because worker is closest with lowest active caseload and high resolution rate for pothole complaints." Managers can accept or override.
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <button type="button" class="accordion-trigger" onclick="toggleAccordionItem(this)">
+            Can CivicCare work offline?
+            <span class="chevron">▼</span>
+          </button>
+          <div class="accordion-content">
+            <div class="accordion-body">
+              The Flutter app includes connectivity monitoring via the <code>connectivity_plus</code> package. While real-time features (WebSocket comments, live feed) require connectivity, the app gracefully handles offline scenarios by caching last-known data and showing connectivity status. Full offline-first support with sync is on the roadmap <span class="badge progress">IN PROGRESS</span>.
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <button type="button" class="accordion-trigger" onclick="toggleAccordionItem(this)">
+            What platforms does CivicCare support?
+            <span class="chevron">▼</span>
+          </button>
+          <div class="accordion-content">
+            <div class="accordion-body">
+              CivicCare is built with Flutter, providing native performance across Android, iOS, and Web from a single codebase. The responsive design adapts at three breakpoints: mobile (&lt; 600px), tablet (600-1200px), and desktop (≥ 1200px), with sidebar navigation appearing at ≥ 800px width.
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <button type="button" class="accordion-trigger" onclick="toggleAccordionItem(this)">
+            How are wards and zones determined?
+            <span class="chevron">▼</span>
+          </button>
+          <div class="accordion-content">
+            <div class="accordion-body">
+              Ward boundaries are stored as GeoJSON polygons in the database, sourced from Delhi's official KML ward boundary files. When a citizen files a complaint, their GPS coordinates are matched against these polygons via the <code>/wards/lookup</code> endpoint to automatically determine the correct ward — no manual entry needed.
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <button type="button" class="accordion-trigger" onclick="toggleAccordionItem(this)">
+            What is the Civic Impact Score?
+            <span class="chevron">▼</span>
+          </button>
+          <div class="accordion-content">
+            <div class="accordion-body">
+              The Civic Impact Score measures the quality of a citizen's participation. You earn points for accurately filled complaints and meaningful community interactions (helpful upvotes, constructive comments). You lose points for AI-flagged irrelevant submissions and abusive/spammy behaviour. This gamified scoring encourages constructive civic engagement.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== TEAM ====== -->
+    <section class="doc-section" id="team">
+      <div class="section-label"><span class="label-line"></span> Stack Syndicate</div>
+      <h2>Team</h2>
+      <p class="section-desc">CivicCare is built by Stack Syndicate — a team passionate about using technology to strengthen public trust in governance.</p>
+
+      <div class="card-grid cols-3 stagger fade-in">
+        <div class="card" style="text-align:center;">
+          <div style="width:64px;height:64px;border-radius:50%;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin:0 auto 16px;">🧠</div>
+          <h4 style="margin-bottom:4px;">Daathwi Naagh</h4>
+          <p style="color:var(--primary);font-weight:600;font-size:.85rem;margin-bottom:8px;">AI Engineer</p>
+          <p>AI integration, backend architecture, and system design.</p>
+        </div>
+        <div class="card" style="text-align:center;">
+          <div style="width:64px;height:64px;border-radius:50%;background:var(--info-bg);color:var(--info);display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin:0 auto 16px;">🔬</div>
+          <h4 style="margin-bottom:4px;">P. Amulya</h4>
+          <p style="color:var(--info);font-weight:600;font-size:.85rem;margin-bottom:8px;">Research Scholar</p>
+          <p>SDG mapping, governance research, and impact metrics.</p>
+        </div>
+        <div class="card" style="text-align:center;">
+          <div style="width:64px;height:64px;border-radius:50%;background:var(--success-bg);color:var(--success);display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin:0 auto 16px;">🎯</div>
+          <h4 style="margin-bottom:4px;">Shwethan Panga</h4>
+          <p style="color:var(--success);font-weight:600;font-size:.85rem;margin-bottom:8px;">UI/UX Strategist & Tester</p>
+          <p>UX strategy, usability testing, and product experience validation.</p>
+        </div>
+      </div>
+
+      <div class="callout info" style="margin-top:24px;">
+        <span class="callout-icon">🏛</span>
+        <div>
+          <strong>Theme: Digital Democracy</strong> — "Most apps digitise complaints. CivicCare digitises transparency, efficiency, and accountability."
+          <br><em>See CivicCare in Action at Bharat Mandapam.</em>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ==================== FOOTER ==================== -->
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div>© 2026 Stack Syndicate · CivicCare · Digital Democracy</div>
+    <div class="footer-links">
+      <a href="#overview">Home</a>
+      <a href="#api-reference">API</a>
+      <a href="#faq">FAQ</a>
+      <a href="https://github.com/daathwi/civic-care-frontend" target="_blank" rel="noopener">Frontend</a>
+      <a href="https://github.com/daathwi/civic-care-backend" target="_blank" rel="noopener">Backend</a>
+    </div>
+  </div>
+</footer>
+
+<!-- Back to Top -->
+<button class="back-to-top" id="backToTop" aria-label="Back to top">↑</button>
+
+<script src="script.js"></script>
+</body>
+</html>
