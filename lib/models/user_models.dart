@@ -181,3 +181,36 @@ class UserProfile {
     };
   }
 }
+
+/// Civic Impact Score — all numeric values come from GET `/analytics/cis/{userId}` (backend only).
+class CisResult {
+  final double totalScore;
+  final Map<String, double> breakdown;
+  final Map<String, int> rawMetrics;
+  /// True when no snapshot exists yet (`source: pending` from API).
+  final bool pending;
+
+  const CisResult({
+    required this.totalScore,
+    required this.breakdown,
+    required this.rawMetrics,
+    this.pending = false,
+  });
+
+  factory CisResult.fromJson(Map<String, dynamic> json) {
+    final src = json['source'] as String?;
+    final isPending = src == 'pending';
+    return CisResult(
+      totalScore: (json['total_score'] ?? 0).toDouble(),
+      breakdown: (json['breakdown'] as Map<String, dynamic>?)?.map(
+            (k, v) => MapEntry(k, (v as num).toDouble()),
+          ) ??
+          {},
+      rawMetrics: (json['raw_metrics'] as Map<String, dynamic>?)?.map(
+            (k, v) => MapEntry(k, (v as num).toInt()),
+          ) ??
+          {},
+      pending: isPending,
+    );
+  }
+}

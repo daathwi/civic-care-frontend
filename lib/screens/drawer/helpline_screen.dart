@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/launch_links.dart';
 import '../../core/app_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../utils/responsive_utils.dart';
@@ -152,7 +153,8 @@ class HelplineScreen extends StatelessWidget {
           ),
           IconButton(
             icon: const Icon(Icons.call_rounded, color: AppTheme.primary),
-            onPressed: () {},
+            onPressed: () => launchPhoneDialer(helpline['number']),
+            tooltip: 'Call',
           ),
         ],
       ),

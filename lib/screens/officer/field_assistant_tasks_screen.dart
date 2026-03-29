@@ -29,22 +29,59 @@ class _FieldAssistantTasksScreenState
     extends ConsumerState<FieldAssistantTasksScreen> {
   Complaint? _selectedTask;
   bool _isRefreshing = false;
-  int _sortIndex = 0; // 0=All, 1=Pending, 2=In Progress, 3=Resolved
+  int _sortIndex = 1; // 0=All, 1=Pending, 2=In Progress, 3=Resolved, 4=Escalations (Assigned)
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = ref.read(authProvider).user;
+      if (user != null) {
+        ref.read(complaintProvider.notifier).loadGrievances(
+          workerId: user.id,
+          status: ComplaintStatus.incompleteAssigned,
+          limit: 100,
+        );
+      }
+    });
+  }
 
   Future<void> _onRefresh() async {
     setState(() => _isRefreshing = true);
-    await ref.read(complaintProvider.notifier).loadGrievances();
+    final user = ref.read(authProvider).user;
+    if (user != null) {
+      final status = _sortIndex == 3
+          ? ComplaintStatus.completed
+          : _sortIndex == 4
+              ? ComplaintStatus.escalated
+              : null;
+      await ref.read(complaintProvider.notifier).loadGrievances(
+        workerId: user.id,
+        status: status,
+        limit: 100,
+      );
+    }
     if (mounted) setState(() => _isRefreshing = false);
   }
 
   List<Complaint> _filterTasks(List<Complaint> all) {
     final authState = ref.read(authProvider);
     final currentUser = authState.user;
-    // Only show tasks assigned to the worker
+    final state = ref.read(complaintProvider);
+    // Only show tasks assigned to the worker. For resolved tasks, backend may return
+    // assigned_to_id=null (legacy); when we loaded with worker_id+status=resolved, trust API.
     final myTasks = all.where((c) {
       if (currentUser == null) return false;
-      return c.assignedToId == currentUser.id ||
+      final matchesAssigned = c.assignedToId == currentUser.id ||
           c.assignedTo == currentUser.name;
+      if (matchesAssigned) return true;
+      // Resolved tab: if we loaded with worker_id+status=resolved, API filtered for us
+      if (c.status == ComplaintStatus.completed &&
+          state.filterWorkerId == currentUser.id &&
+          state.filterStatus == ComplaintStatus.completed) {
+        return true;
+      }
+      return false;
     }).toList();
 
     switch (_sortIndex) {
@@ -59,6 +96,10 @@ class _FieldAssistantTasksScreenState
       case 3:
         return myTasks
             .where((c) => c.status == ComplaintStatus.completed)
+            .toList();
+      case 4:
+        return myTasks
+            .where((c) => c.status == ComplaintStatus.escalated)
             .toList();
       default:
         return myTasks;
@@ -178,9 +219,9 @@ class _FieldAssistantTasksScreenState
                         padding: const EdgeInsets.only(bottom: 20),
                         child: _TaskFeedCard(
                           task: tasks[index],
-                          onTap: () {
+                          onTap: () async {
                             HapticFeedback.lightImpact();
-                            Navigator.push(
+                            await Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (_) => FieldAssistantTaskDetail(
@@ -188,6 +229,20 @@ class _FieldAssistantTasksScreenState
                                 ),
                               ),
                             );
+                            if (!context.mounted) return;
+                            final user = ref.read(authProvider).user;
+                            if (user != null) {
+                              final status = _sortIndex == 3
+                                  ? ComplaintStatus.completed
+                                  : _sortIndex == 4
+                                      ? ComplaintStatus.escalated
+                                      : null;
+                              ref.read(complaintProvider.notifier).loadGrievances(
+                                workerId: user.id,
+                                status: status,
+                                limit: 100,
+                              );
+                            }
                           },
                         ),
                       );
@@ -293,12 +348,13 @@ class _FieldAssistantTasksScreenState
   // ── Filter Chips ───────────────────────────────────────────────────────────
 
   Widget _buildFilterChips() {
-    final labels = ['All', 'Pending', 'In Progress', 'Resolved'];
+    final labels = ['All', 'Pending', 'In Progress', 'Resolved', 'Escalations'];
     final icons = [
       Icons.list_rounded,
       Icons.schedule_rounded,
       Icons.bolt_rounded,
       Icons.check_circle_rounded,
+      Icons.warning_rounded,
     ];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -311,6 +367,23 @@ class _FieldAssistantTasksScreenState
               onTap: () {
                 HapticFeedback.selectionClick();
                 setState(() => _sortIndex = i);
+                final user = ref.read(authProvider).user;
+                if (user != null) {
+                  final status = i == 1
+                      ? ComplaintStatus.incompleteAssigned
+                      : i == 2
+                          ? ComplaintStatus.ongoing
+                          : i == 3
+                              ? ComplaintStatus.completed
+                              : i == 4
+                                  ? ComplaintStatus.escalated
+                                  : null;
+                  ref.read(complaintProvider.notifier).loadGrievances(
+                    workerId: user.id,
+                    status: status,
+                    limit: 100,
+                  );
+                }
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
@@ -533,7 +606,7 @@ class _FieldAssistantTasksScreenState
             Text(
               _sortIndex == 0
                   ? 'No tasks assigned'
-                  : 'No ${['', 'pending', 'in-progress', 'resolved'][_sortIndex]} tasks',
+                  : 'No ${['', 'pending', 'in-progress', 'resolved', 'escalated'][_sortIndex]} tasks',
               style: GoogleFonts.outfit(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,

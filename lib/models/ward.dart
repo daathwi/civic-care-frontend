@@ -9,6 +9,10 @@ class Ward {
   final String? zoneName;
   final String? representativeName;
   final List<String> representativePhone;
+  /// Councillor / elected rep email (API: representative_email).
+  final String? representativeEmail;
+  /// Party name from party_id or legacy field (API: representative_party).
+  final String? representativeParty;
   final double? centroidLat;
   final double? centroidLng;
   final double? minLat;
@@ -24,6 +28,8 @@ class Ward {
     this.zoneName,
     this.representativeName,
     this.representativePhone = const [],
+    this.representativeEmail,
+    this.representativeParty,
     this.centroidLat,
     this.centroidLng,
     this.minLat,
@@ -39,11 +45,13 @@ class Ward {
       number: json['number'],
       zoneId: json['zone_id'],
       zoneName: json['zone_name'],
-      representativeName: json['representative_name'],
+      representativeName: json['representative_name'] as String?,
       representativePhone: (json['representative_phone'] as List?)
               ?.map((e) => e.toString())
               .toList() ??
           [],
+      representativeEmail: json['representative_email'] as String?,
+      representativeParty: json['representative_party'] as String?,
       centroidLat: (json['centroid_lat'] as num?)?.toDouble(),
       centroidLng: (json['centroid_lng'] as num?)?.toDouble(),
       minLat: (json['min_lat'] as num?)?.toDouble(),

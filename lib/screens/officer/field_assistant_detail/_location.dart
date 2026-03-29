@@ -138,7 +138,55 @@ extension _FADetailLocation on _FieldAssistantTaskDetailState {
           ],
         ),
         if (att.isClockedIn) _buildProximityCard(isAtSite, dist),
+        const SizedBox(height: 16),
+        _buildProximityRadio(),
       ],
+    );
+  }
+
+  Widget _buildProximityRadio() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceScaffold,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.location_on_outlined, size: 20, color: AppTheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Verify at grievance location',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                Text(
+                  _requireLocationAtGrievance
+                      ? 'GPS required — must be within 50m'
+                      : 'Location check skipped (different from shift)',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: _requireLocationAtGrievance,
+            onChanged: (v) => _rebuildState(() => _requireLocationAtGrievance = v),
+            activeTrackColor: AppTheme.primary.withValues(alpha: 0.5),
+          ),
+        ],
+      ),
     );
   }
 

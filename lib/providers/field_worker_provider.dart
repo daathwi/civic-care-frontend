@@ -29,6 +29,7 @@ FieldWorker _workerFromApi(Map<String, dynamic> m) {
   final phone = _str(m['phone']);
   final lastActiveWard = _str(m['last_active_ward']);
   final rating = (m['rating'] is num) ? (m['rating'] as num).toDouble() : 0.0;
+  final ratingsCount = m['ratings_count'] is int ? m['ratings_count'] as int : 0;
   final tasksCompleted = m['tasks_completed'] is int ? m['tasks_completed'] as int : 0;
   final tasksActive = m['tasks_active'] is int ? m['tasks_active'] as int : 0;
   final statusStr = (m['status'] as String?)?.toLowerCase();
@@ -44,6 +45,7 @@ FieldWorker _workerFromApi(Map<String, dynamic> m) {
     department: _deptFromApi(deptName),
     lastActiveWard: lastActiveWard,
     rating: rating,
+    ratingsCount: ratingsCount,
     tasksCompleted: tasksCompleted,
     tasksActive: tasksActive,
     status: status,
@@ -61,13 +63,15 @@ class FieldWorkerNotifier extends Notifier<List<FieldWorker>> {
     try {
       final token = ref.read(authProvider).accessToken;
       final user = ref.read(effectiveUserProvider) ?? ref.read(authProvider).user;
-      final departmentId = user?.departmentId;
+      final isManager = user?.role == UserRole.fieldManager || user?.role == UserRole.admin;
+      final departmentId = isManager ? null : user?.departmentId;
       final wardId = user?.wardId;
       final res = await ref.read(workerRepositoryProvider).list(
         accessToken: token,
         limit: 100,
         department: departmentId,
         wardId: wardId,
+        sortBy: 'rating',
       );
       final raw = res['items'];
       final items = raw is List ? raw : <dynamic>[];

@@ -172,6 +172,10 @@ extension _ComplaintDetailUpdates on _ComplaintDetailScreenState {
     final userRole = ref.watch(authProvider).user?.role;
     final isCitizen = userRole == UserRole.citizen;
     final isManager = userRole == UserRole.fieldManager;
+    final workers = ref.watch(fieldWorkerProvider);
+    final assignedWorker = c.assignedToId != null
+        ? workers.where((w) => w.id == c.assignedToId).firstOrNull
+        : null;
 
     // Role-based label
     final String cardLabel;
@@ -238,6 +242,24 @@ extension _ComplaintDetailUpdates on _ComplaintDetailScreenState {
                         color: AppTheme.textPrimary,
                       ),
                     ),
+                    if (assignedWorker != null && assignedWorker.ratingsCount > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Row(
+                          children: [
+                            Icon(Icons.star_rounded, size: 14, color: Colors.amber[700]),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${assignedWorker.rating.toStringAsFixed(1)} (${assignedWorker.ratingsCount})',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -287,7 +309,7 @@ extension _ComplaintDetailUpdates on _ComplaintDetailScreenState {
                 ),
                 const Spacer(),
                 TextButton.icon(
-                  onPressed: () {},
+                  onPressed: () => launchPhoneDialer(c.workerContact),
                   icon: const Icon(Icons.call, size: 14),
                   label: const Text('CALL'),
                   style: TextButton.styleFrom(
@@ -344,11 +366,14 @@ extension _ComplaintDetailUpdates on _ComplaintDetailScreenState {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        _formatEventTitle(event.title),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                      Expanded(
+                        child: Text(
+                          _formatEventTitle(event.title),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       Text(
@@ -458,13 +483,24 @@ extension _ComplaintDetailUpdates on _ComplaintDetailScreenState {
       backgroundColor: Colors.transparent,
       builder: (_) => StatefulBuilder(
         builder: (ctx, setSheet) {
-          final dept =
-              ref.read(effectiveUserProvider)?.department ??
-              ref.read(authProvider).user?.department ??
-              Department.sanitation;
-          final filtered = allWorkers.where((w) {
-            return w.department.id == dept.id && w.lastActiveWard == c.ward;
+          final user = ref.read(effectiveUserProvider) ??
+              ref.read(authProvider).user;
+          final complaintDeptId = c.category.name.toLowerCase();
+          final filteredByDept = allWorkers.where((w) {
+            return w.department.id.contains(complaintDeptId) || 
+                   complaintDeptId.contains(w.department.id);
           }).toList();
+
+          final filtered = filteredByDept.isNotEmpty ? filteredByDept : allWorkers.toList();
+
+          // Sort so those in the same ward come first (already mostly filtered by API, but extra safety)
+          filtered.sort((a, b) {
+            final aInWard = a.lastActiveWard == c.ward;
+            final bInWard = b.lastActiveWard == c.ward;
+            if (aInWard && !bInWard) return -1;
+            if (!aInWard && bInWard) return 1;
+            return 0;
+          });
 
           if (selected != null && !filtered.contains(selected)) selected = null;
 
@@ -522,7 +558,9 @@ extension _ComplaintDetailUpdates on _ComplaintDetailScreenState {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'Showing field assistants currently active in ${c.ward}',
+                  filteredByDept.isNotEmpty
+                      ? 'Showing experts in ${c.category.label} (in ${user?.ward ?? "your ward"}).'
+                      : 'No specialists in ${c.category.label} found. Showing all available assistants in ${user?.ward ?? "your ward"}.',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: Colors.grey[500],
@@ -530,6 +568,7 @@ extension _ComplaintDetailUpdates on _ComplaintDetailScreenState {
                   ),
                 ),
                 const SizedBox(height: 16),
+
                 Flexible(
                   child: filtered.isEmpty
                       ? Center(
@@ -587,13 +626,13 @@ extension _ComplaintDetailUpdates on _ComplaintDetailScreenState {
                                               color: isSelected ? Colors.teal[900] : Colors.grey[800],
                                             ),
                                           ),
-                                          Text(
-                                            '${w.designation} • ${w.phone}',
-                                            style: GoogleFonts.inter(
-                                              fontSize: 12,
-                                              color: isSelected ? Colors.teal[700] : Colors.grey[600],
-                                            ),
-                                          ),
+                                           Text(
+                                             '${w.department.shortCode} • ${w.designation} • ${w.phone}',
+                                             style: GoogleFonts.inter(
+                                               fontSize: 12,
+                                               color: isSelected ? Colors.teal[700] : Colors.grey[600],
+                                             ),
+                                           ),
                                         ],
                                       ),
                                     ),
@@ -608,7 +647,9 @@ extension _ComplaintDetailUpdates on _ComplaintDetailScreenState {
                                           const Icon(Icons.star_rounded, size: 14, color: Colors.amber),
                                           const SizedBox(width: 4),
                                           Text(
-                                            w.rating.toString(),
+                                            w.ratingsCount > 0
+                                                ? '${w.rating.toStringAsFixed(1)} (${w.ratingsCount})'
+                                                : '—',
                                             style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.amber[800], fontSize: 12),
                                           ),
                                         ],
@@ -804,6 +845,7 @@ extension _ComplaintDetailUpdates on _ComplaintDetailScreenState {
     // Show interactive star rating
     return _CitizenRatingInput(
       complaintId: c.id,
+      reopenCount: c.reopenCount,
       onRated: () {
         // Refresh after rating
         ref.read(complaintProvider.notifier).refreshGrievanceDetail(c.id);
@@ -816,10 +858,12 @@ extension _ComplaintDetailUpdates on _ComplaintDetailScreenState {
 
 class _CitizenRatingInput extends ConsumerStatefulWidget {
   final String complaintId;
+  final int reopenCount;
   final VoidCallback onRated;
 
   const _CitizenRatingInput({
     required this.complaintId,
+    required this.reopenCount,
     required this.onRated,
   });
 
@@ -854,8 +898,17 @@ class _CitizenRatingInputState extends ConsumerState<_CitizenRatingInput> {
         ),
       );
     } else {
+      Complaint? updatedComplaint;
+      for (final c in ref.read(complaintProvider).complaints) {
+        if (c.id == widget.complaintId) {
+          updatedComplaint = c;
+          break;
+        }
+      }
       final msg = rating < 3
-          ? 'Ticket reopened based on your rating ($rating/5).'
+          ? ((updatedComplaint?.status == ComplaintStatus.escalated)
+              ? 'Ticket escalated after repeated low-rating feedback ($rating/5).'
+              : 'Ticket reopened based on your rating ($rating/5).')
           : 'Thank you for rating! ($rating/5)';
       
       ScaffoldMessenger.of(context).showSnackBar(
@@ -937,7 +990,9 @@ class _CitizenRatingInputState extends ConsumerState<_CitizenRatingInput> {
             const SizedBox(height: 8),
             Text(
               _hoveredStar < 3
-                  ? 'This will reopen the ticket for review.'
+                  ? ((widget.reopenCount + 1) >= 3
+                      ? 'This is the 3rd reopen feedback. Ticket will be escalated.'
+                      : 'This will reopen the ticket for review.')
                   : _hoveredStar == 3
                       ? 'Average'
                       : _hoveredStar == 4
@@ -971,7 +1026,11 @@ class _CitizenRatingInputState extends ConsumerState<_CitizenRatingInput> {
                         elevation: 0,
                       ),
                       child: Text(
-                        _hoveredStar < 3 ? 'SUBMIT & REOPEN' : 'SUBMIT RATING',
+                        _hoveredStar < 3
+                            ? ((widget.reopenCount + 1) >= 3
+                                ? 'SUBMIT & ESCALATE'
+                                : 'SUBMIT & REOPEN')
+                            : 'SUBMIT RATING',
                         style: GoogleFonts.outfit(
                           fontWeight: FontWeight.bold,
                           letterSpacing: 0.5,

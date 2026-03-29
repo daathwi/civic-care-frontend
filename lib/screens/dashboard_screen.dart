@@ -5,14 +5,18 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../core/app_theme.dart';
 import '../models/complaint.dart';
+import '../models/user_models.dart';
+import '../providers/analytics_provider.dart';
 import '../providers/complaint_provider.dart';
 import '../providers/connectivity_provider.dart';
 import '../utils/responsive_utils.dart';
 import '../widgets/civic_ui.dart';
 
 import 'complaint_detail/complaint_detail_screen.dart';
+import 'council_directory_screen.dart';
 import 'drawer/helpline_screen.dart';
 import 'map_screen.dart';
+import '../widgets/ward_weather_widget.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -36,24 +40,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final complaints = gState.complaints;
     final userName = ref.watch(userNameProvider);
     final isOffline = ref.watch(connectivityProvider).valueOrNull == false;
+    final cisAsync = ref.watch(userCisProvider);
 
     // Show shimmer on first load (no data yet)
     final showSkeleton = gState.isLoading && complaints.isEmpty;
 
-    // Data Aggregation
-    final resolved = complaints
-        .where((c) => c.status == ComplaintStatus.completed)
-        .length;
-    final inProgress = complaints
-        .where(
-          (c) =>
-              c.status == ComplaintStatus.ongoing ||
-              c.status == ComplaintStatus.incompleteAssigned,
-        )
-        .length;
-    final pending = complaints
-        .where((c) => c.status == ComplaintStatus.incompleteUnassigned)
-        .length;
+    // Data Aggregation (statusCounts ensures consistency with filter chips)
+    final counts = statusCounts(complaints);
+    final resolved = counts.resolved;
+    final inProgress = counts.assigned + counts.inProgress; // "In Work" = assigned + ongoing
+    final pending = counts.pending;
+    final escalated = counts.escalated;
 
     return Column(
       children: [
@@ -73,14 +70,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     resolved,
                     inProgress,
                     pending,
+                    escalated,
                     complaints,
+                    cisAsync,
                   ),
                   desktop: _buildWebLayout(
                     userName,
                     resolved,
                     inProgress,
                     pending,
+                    escalated,
                     complaints,
+                    cisAsync,
                   ),
                 ),
         ),
@@ -108,7 +109,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     int resolved,
     int inProgress,
     int pending,
+    int escalated,
     List<Complaint> complaints,
+    AsyncValue<CisResult?> cisAsync,
   ) {
     return RefreshIndicator(
       onRefresh: _onRefresh,
@@ -163,7 +166,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildWelcomeCard(userName, resolved, complaints.length),
+                  _buildWelcomeCard(context, userName, cisAsync),
+                  const SizedBox(height: 20),
+                  const WardWeatherWidget(),
                   const SizedBox(height: 32),
 
                   _buildSectionHeader('SYSTEM OVERVIEW'),
@@ -172,6 +177,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     resolved,
                     inProgress,
                     pending,
+                    escalated,
                     complaints.length,
                   ),
                   const SizedBox(height: 32),
@@ -197,7 +203,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     int resolved,
     int inProgress,
     int pending,
+    int escalated,
     List<Complaint> complaints,
+    AsyncValue<CisResult?> cisAsync,
   ) {
     return Scaffold(
       backgroundColor: AppTheme.surfaceScaffold,
@@ -209,7 +217,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Web hero: slim banner
-              _buildWebHeroBanner(userName, resolved, complaints.length),
+              _buildWebHeroBanner(context, userName, cisAsync),
+              const SizedBox(height: 24),
+              const WardWeatherWidget(),
               const SizedBox(height: 32),
               // Web KPI: horizontal strip
               _buildSectionHeader('SYSTEM OVERVIEW'),
@@ -218,6 +228,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 resolved,
                 inProgress,
                 pending,
+                escalated,
                 complaints.length,
               ),
               const SizedBox(height: 32),
@@ -249,114 +260,135 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildWebHeroBanner(String name, int resolved, int total) {
-    final score = total == 0 ? 0 : (resolved / total * 100).toInt();
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
-      decoration: BoxDecoration(
-        color: AppTheme.primary,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primary.withValues(alpha: 0.2),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Community Performance',
-                  style: GoogleFonts.inter(
-                    color: Colors.white.withValues(alpha: 0.7),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Welcome back, $name',
-                  style: GoogleFonts.outfit(
-                    color: Colors.white,
-                    fontSize: 34,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: -0.5,
-                  ),
+  Widget _buildWebHeroBanner(BuildContext context, String name, AsyncValue<CisResult?> cisAsync) {
+    return cisAsync.when(
+      data: (cis) {
+        final double scoreValue = cis?.totalScore ?? 0.0;
+        final String scoreStr = scoreValue > 0 ? scoreValue.toStringAsFixed(1) : '-';
+        String tier = 'Contributor';
+        if (scoreValue >= 80) tier = 'Civic Leader';
+        else if (scoreValue >= 50) tier = 'Active Patriot';
+        else if (scoreValue < 20 && scoreValue > 0) tier = 'Novice';
+
+        return GestureDetector(
+          onTap: () {
+            if (cis != null && !cis.pending) {
+              HapticFeedback.lightImpact();
+              _showCisBreakdown(context, cis);
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+            decoration: BoxDecoration(
+              color: AppTheme.primary,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primary.withValues(alpha: 0.2),
+                  blurRadius: 30,
+                  offset: const Offset(0, 10),
                 ),
               ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
             ),
             child: Row(
-              mainAxisSize: MainAxisSize.min,
               children: [
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    SizedBox(
-                      width: 56,
-                      height: 56,
-                      child: CircularProgressIndicator(
-                        value: score / 100,
-                        strokeWidth: 6,
-                        color: Colors.white,
-                        backgroundColor: Colors.white.withValues(alpha: 0.15),
-                        strokeCap: StrokeCap.round,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Community Performance',
+                        style: GoogleFonts.inter(
+                          color: Colors.white.withValues(alpha: 0.7),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
                       ),
-                    ),
-                    Text(
-                      '$score%',
-                      style: GoogleFonts.outfit(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                      const SizedBox(height: 8),
+                      Text(
+                        'Welcome back, $name',
+                        style: GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontSize: 34,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.5,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                const SizedBox(width: 20),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Impact Score',
-                      style: GoogleFonts.inter(
-                        color: Colors.white.withValues(alpha: 0.6),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          SizedBox(
+                            width: 56,
+                            height: 56,
+                            child: CircularProgressIndicator(
+                              value: scoreValue / 100,
+                              strokeWidth: 6,
+                              color: Colors.white,
+                              backgroundColor: Colors.white.withValues(alpha: 0.15),
+                              strokeCap: StrokeCap.round,
+                            ),
+                          ),
+                          Text(
+                            scoreStr,
+                            style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    Text(
-                      'Strong Progress',
-                      style: GoogleFonts.outfit(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
+                      const SizedBox(width: 20),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Civic Impact Score',
+                            style: GoogleFonts.inter(
+                              color: Colors.white.withValues(alpha: 0.6),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            cis != null && !cis.pending ? tier : 'Pending',
+                            style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) => _buildFallbackWelcomeCard(name),
     );
   }
 
-  Widget _buildWebKpiStrip(int resolved, int active, int pending, int total) {
+  Widget _buildWebKpiStrip(
+      int resolved, int active, int pending, int escalated, int total) {
     return Row(
       children: [
         Expanded(
@@ -385,6 +417,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             Icons.engineering_rounded,
           ),
         ),
+        if (escalated > 0) ...[
+          const SizedBox(width: 16),
+          Expanded(
+            child: _webKpiCard(
+              'Escalated',
+              escalated,
+              AppTheme.error,
+              Icons.warning_rounded,
+            ),
+          ),
+        ],
         const SizedBox(width: 16),
         Expanded(
           child: _webKpiCard(
@@ -482,7 +525,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           icon: Icons.verified_user_rounded,
           label: 'Council Directory',
           color: Colors.teal,
-          onTap: () {},
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const CouncilDirectoryScreen()),
+          ),
         ),
       ],
     );
@@ -554,103 +600,345 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildWelcomeCard(String name, int resolved, int total) {
-    final score = total == 0 ? 0 : (resolved / total * 100).toInt();
+  Widget _buildWelcomeCard(BuildContext context, String name, AsyncValue<CisResult?> cisAsync) {
+    return cisAsync.when(
+      data: (cis) {
+        final double scoreValue = cis?.totalScore ?? 0.0;
+        final String scoreStr = scoreValue > 0 ? scoreValue.toStringAsFixed(1) : '-';
+        
+        String tier = 'Contributor';
+        if (scoreValue >= 80) tier = 'Civic Leader';
+        else if (scoreValue >= 50) tier = 'Active Patriot';
+        else if (scoreValue < 20 && scoreValue > 0) tier = 'Novice';
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppTheme.primary, AppTheme.primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primary.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-            spreadRadius: -4,
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        return GestureDetector(
+          onTap: () {
+            if (cis != null && !cis.pending) {
+              HapticFeedback.lightImpact();
+              _showCisBreakdown(context, cis);
+            }
+          },
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppTheme.primary, AppTheme.primaryDark],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primary.withValues(alpha: 0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                  spreadRadius: -4,
+                ),
+              ],
+            ),
+            child: Row(
               children: [
-                Text(
-                  'Welcome back,',
-                  style: GoogleFonts.inter(
-                    color: Colors.white.withValues(alpha: 0.8),
-                    fontSize: 14,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Welcome back,',
+                        style: GoogleFonts.inter(
+                          color: Colors.white.withValues(alpha: 0.8),
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        name,
+                        style: GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          cis != null && !cis.pending
+                              ? 'Civic Impact: $tier'
+                              : 'Civic Impact: Pending',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  name,
-                  style: GoogleFonts.outfit(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'Civic Impact: Top 5%',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SizedBox(
+                      width: 72,
+                      height: 72,
+                      child: CircularProgressIndicator(
+                        value: scoreValue / 100,
+                        strokeWidth: 6,
+                        color: Colors.white,
+                        backgroundColor: Colors.white.withValues(alpha: 0.2),
+                        strokeCap: StrokeCap.round,
+                      ),
                     ),
-                  ),
+                    Text(
+                      scoreStr,
+                      style: GoogleFonts.outfit(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              SizedBox(
-                width: 72,
-                height: 72,
-                child: CircularProgressIndicator(
-                  value: score / 100,
-                  strokeWidth: 6,
-                  color: Colors.white,
-                  backgroundColor: Colors.white.withValues(alpha: 0.2),
-                  strokeCap: StrokeCap.round,
-                ),
-              ),
-              Text(
-                '$score',
-                style: GoogleFonts.outfit(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ],
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) => _buildFallbackWelcomeCard(name),
+    );
+  }
+
+  Widget _buildFallbackWelcomeCard(String name) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppTheme.primary,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Welcome back,',
+            style: GoogleFonts.inter(
+              color: Colors.white.withValues(alpha: 0.8),
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            name,
+            style: GoogleFonts.outfit(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              letterSpacing: -0.5,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildBentoGrid(int resolved, int active, int pending, int total) {
+  void _showCisBreakdown(BuildContext context, CisResult cis) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: AppTheme.border,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Score Methodology Breakdown',
+                  style: GoogleFonts.outfit(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Your 100-point Civic Impact Score quantifies your contribution using five verified metrics.',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                
+                // Metrics
+                _buildBreakdownRow(
+                  'Ward Contribution Ratio (WCR)',
+                  'Active grievances reported in your ward.',
+                  cis.breakdown['WCR'] ?? 0,
+                  30.0,
+                  Icons.report_gmailerrorred_rounded,
+                ),
+                _buildBreakdownRow(
+                  'Upvote Genesis Impact (UGI)',
+                  'Community validation of your reports.',
+                  cis.breakdown['UGI'] ?? 0,
+                  20.0,
+                  Icons.thumb_up_alt_rounded,
+                ),
+                _buildBreakdownRow(
+                  'Civic Validation Participation (CVP)',
+                  'Your upvoting activity across the platform.',
+                  cis.breakdown['CVP'] ?? 0,
+                  20.0,
+                  Icons.how_to_vote_rounded,
+                ),
+                _buildBreakdownRow(
+                  'Consistency Index (CI)',
+                  'Sustained engagement since registration.',
+                  cis.breakdown['CI'] ?? 0,
+                  15.0,
+                  Icons.calendar_month_rounded,
+                ),
+                _buildBreakdownRow(
+                  'Noise Prevention Factor (NPF)',
+                  'Report authenticity & spam avoidance.',
+                  cis.breakdown['NPF'] ?? 0,
+                  15.0,
+                  Icons.verified_user_rounded,
+                ),
+                
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: Text(
+                      'Done',
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBreakdownRow(
+    String title,
+    String desc,
+    double value,
+    double max,
+    IconData icon,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 20, color: AppTheme.primary),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${value.toStringAsFixed(1)} / ${max.toInt()}',
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  desc,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                LinearProgressIndicator(
+                  value: value / max,
+                  backgroundColor: AppTheme.border,
+                  valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                  borderRadius: BorderRadius.circular(4),
+                  minHeight: 6,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBentoGrid(
+      int resolved, int active, int pending, int escalated, int total) {
     return Column(
       children: [
         Row(
@@ -704,6 +992,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
           ],
         ),
+        if (escalated > 0) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _bentoItem(
+                  'ESCALATED',
+                  escalated.toString(),
+                  AppTheme.error.withValues(alpha: 0.1),
+                  AppTheme.error,
+                  Icons.warning_rounded,
+                  'SLA Breach',
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Spacer(),
+            ],
+          ),
+        ],
       ],
     );
   }
@@ -808,10 +1115,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             label: 'Council',
             color: Colors.teal,
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Councilor Directory is coming soon!'),
-                ),
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CouncilDirectoryScreen()),
               );
             },
           ),

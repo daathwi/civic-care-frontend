@@ -3,58 +3,42 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/complaint.dart';
 import '../../providers/complaint_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../core/app_theme.dart';
 import '../../utils/responsive_utils.dart';
-import '../complaint_detail/complaint_detail_screen.dart';
-import 'escalation_priority_screen.dart';
-import '../../providers/analytics_provider.dart';
-import '../../repository/analytics_repository.dart';
+import 'field_assistant_detail/field_assistant_task_detail.dart';
 
-class ManagerEscalationsScreen extends ConsumerStatefulWidget {
-  const ManagerEscalationsScreen({super.key});
+/// Worker portal: Escalated tasks assigned to me.
+class WorkerEscalationsScreen extends ConsumerStatefulWidget {
+  const WorkerEscalationsScreen({super.key});
 
   @override
-  ConsumerState<ManagerEscalationsScreen> createState() =>
-      _ManagerEscalationsScreenState();
+  ConsumerState<WorkerEscalationsScreen> createState() =>
+      _WorkerEscalationsScreenState();
 }
 
-class _ManagerEscalationsScreenState
-    extends ConsumerState<ManagerEscalationsScreen> {
+class _WorkerEscalationsScreenState extends ConsumerState<WorkerEscalationsScreen> {
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(complaintProvider.notifier).loadGrievances(
-            limit: 100,
-            status: ComplaintStatus.escalated,
-          );
+      final user = ref.read(authProvider).user;
+      if (user != null) {
+        ref.read(workerEscalationsProvider.notifier).loadGrievances(
+              workerId: user.id,
+              status: ComplaintStatus.escalated,
+              limit: 100,
+            );
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final grievanceState = ref.watch(complaintProvider);
-    final priorityAsync = ref.watch(escalationPriorityProvider(const (wardId: null, zoneId: null)));
+    final grievanceState = ref.watch(workerEscalationsProvider);
+    final escalated = grievanceState.complaints;
 
-    // Filter to escalated only
-    final escalated = grievanceState.complaints
-        .where((c) => c.status == ComplaintStatus.escalated)
-        .toList();
-
-    // Map EPS data to escalated grievances for sorting/display
-    final epsMap = priorityAsync.maybeWhen(
-      data: (items) => {for (var item in items) item.id: item},
-      orElse: () => <String, EscalationPriorityItem>{},
-    );
-
-    // Sort by EPS (highest first), fallback to date (oldest first)
-    final sorted = [...escalated]..sort((a, b) {
-        final epsA = epsMap[a.id]?.epsTotal ?? 0.0;
-        final epsB = epsMap[b.id]?.epsTotal ?? 0.0;
-        if (epsA != epsB) return epsB.compareTo(epsA);
-        return a.date.compareTo(b.date);
-      });
-
+    final sorted = [...escalated]..sort((a, b) => a.date.compareTo(b.date));
     final isWeb = ResponsiveUtils.isDesktop(context);
 
     return NestedScrollView(
@@ -90,7 +74,6 @@ class _ManagerEscalationsScreenState
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Header ──────────────────────────────────────────────────────
           Container(
             width: double.infinity,
             color: AppTheme.surfaceScaffold,
@@ -103,7 +86,6 @@ class _ManagerEscalationsScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Status banner
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -145,8 +127,8 @@ class _ManagerEscalationsScreenState
                       Expanded(
                         child: Text(
                           escalated.isEmpty
-                              ? 'All clear — no SLA breaches right now.'
-                              : '${escalated.length} grievances need immediate attention.',
+                              ? 'All clear — no escalated tasks assigned to you.'
+                              : '${escalated.length} escalated tasks need your attention.',
                           style: GoogleFonts.inter(
                             fontWeight: FontWeight.w600,
                             fontSize: 13,
@@ -178,130 +160,91 @@ class _ManagerEscalationsScreenState
                     ],
                   ),
                 ),
-                if (escalated.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  InkWell(
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const EscalationPriorityScreen(),
-                      ),
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: AppTheme.primary.withValues(alpha: 0.1),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.analytics_outlined,
-                            color: AppTheme.primary,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'View Priority Analysis',
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                                color: AppTheme.primary,
-                              ),
-                            ),
-                          ),
-                          const Icon(
-                            Icons.arrow_forward_rounded,
-                            color: AppTheme.primary,
-                            size: 16,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
-
-          // ── List ─────────────────────────────────────────────────────────
           Expanded(
             child: grievanceState.isLoading && escalated.isEmpty
                 ? const Center(
                     child: CircularProgressIndicator(color: AppTheme.primary),
                   )
                 : escalated.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: AppTheme.success.withValues(alpha: 0.08),
-                            shape: BoxShape.circle,
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                color: AppTheme.success.withValues(alpha: 0.08),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.verified_rounded,
+                                size: 52,
+                                color: AppTheme.success,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            Text(
+                              'No escalations',
+                              style: GoogleFonts.outfit(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'All your tasks are within SLA.',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : RefreshIndicator(
+                        color: AppTheme.primary,
+                        onRefresh: () async {
+                          final user = ref.read(authProvider).user;
+                          if (user != null) {
+                            await ref.read(workerEscalationsProvider.notifier).loadGrievances(
+                                  workerId: user.id,
+                                  status: ComplaintStatus.escalated,
+                                  limit: 100,
+                                );
+                          }
+                        },
+                        child: ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(
+                            parent: BouncingScrollPhysics(),
                           ),
-                          child: Icon(
-                            Icons.verified_rounded,
-                            size: 52,
-                            color: AppTheme.success,
+                          padding: EdgeInsets.fromLTRB(
+                            isWeb ? 32 : 20,
+                            8,
+                            isWeb ? 32 : 20,
+                            140,
+                          ),
+                          itemCount: sorted.length,
+                          separatorBuilder: (_, _) => const SizedBox(height: 10),
+                          itemBuilder: (context, index) => _EscalationCard(
+                            complaint: sorted[index],
+                            isWeb: isWeb,
+                            onPop: () {
+                              final user = ref.read(authProvider).user;
+                              if (user != null) {
+                                ref.read(workerEscalationsProvider.notifier).loadGrievances(
+                                      workerId: user.id,
+                                      status: ComplaintStatus.escalated,
+                                      limit: 100,
+                                    );
+                              }
+                            },
                           ),
                         ),
-                        const SizedBox(height: 20),
-                        Text(
-                          'No escalations',
-                          style: GoogleFonts.outfit(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'All grievances are within SLA.',
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            color: AppTheme.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : RefreshIndicator(
-                    color: AppTheme.primary,
-                    onRefresh: () => ref
-                        .read(complaintProvider.notifier)
-                        .loadGrievances(
-                          limit: 100,
-                          status: ComplaintStatus.escalated,
-                        ),
-                    child: ListView.separated(
-                      physics: const AlwaysScrollableScrollPhysics(
-                        parent: BouncingScrollPhysics(),
                       ),
-                      padding: EdgeInsets.fromLTRB(
-                        isWeb ? 32 : 20,
-                        8,
-                        isWeb ? 32 : 20,
-                        140,
-                      ),
-                      itemCount: sorted.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 10),
-                      itemBuilder: (context, index) => _EscalationCard(
-                        complaint: sorted[index],
-                        isWeb: isWeb,
-                        eps: epsMap[sorted[index].id],
-                      ),
-                    ),
-                  ),
           ),
         ],
       ),
@@ -309,15 +252,15 @@ class _ManagerEscalationsScreenState
   }
 }
 
-// ── Escalation card ─────────────────────────────────────────────────────────
 class _EscalationCard extends StatelessWidget {
   final Complaint complaint;
   final bool isWeb;
-  final EscalationPriorityItem? eps;
+  final VoidCallback? onPop;
+
   const _EscalationCard({
     required this.complaint,
     required this.isWeb,
-    this.eps,
+    this.onPop,
   });
 
   @override
@@ -345,12 +288,14 @@ class _EscalationCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         child: InkWell(
           borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ComplaintDetailScreen(complaint: complaint),
-            ),
-          ),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => FieldAssistantTaskDetail(complaint: complaint),
+              ),
+            ).then((_) => onPop?.call());
+          },
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -419,15 +364,6 @@ class _EscalationCard extends StatelessWidget {
                       label: '${hours}h overdue',
                       color: severity,
                     ),
-                    if (eps != null)
-                      _EscalationChip(
-                        icon: Icons.priority_high_rounded,
-                        label: 'EPS: ${eps!.epsTotal.toInt()}%',
-                        color: eps!.escalationLevel.toLowerCase() == 'critical'
-                            ? AppTheme.error
-                            : Colors.orange,
-                        isBold: true,
-                      ),
                     _EscalationChip(
                       icon: Icons.category_outlined,
                       label: complaint.subCategory,
@@ -453,13 +389,11 @@ class _EscalationChip extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
-  final bool isBold;
 
   const _EscalationChip({
     required this.icon,
     required this.label,
     required this.color,
-    this.isBold = false,
   });
 
   @override
@@ -480,7 +414,7 @@ class _EscalationChip extends StatelessWidget {
             label,
             style: GoogleFonts.inter(
               fontSize: 12,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+              fontWeight: FontWeight.w600,
               color: color,
             ),
           ),

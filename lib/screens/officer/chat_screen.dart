@@ -11,6 +11,7 @@ import '../../core/app_theme.dart';
 import '../../models/message.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/message_provider.dart';
+import '../../providers/offline_provider.dart';
 
 /// Per-grievance staff chat screen — real-time WebSocket messaging via InternalMessage.
 class ChatScreen extends ConsumerStatefulWidget {
@@ -53,8 +54,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       );
 
       // Connect WebSocket
-      final baseWsUrl = apiBaseUrl.replaceFirst('http://', 'ws://').replaceFirst('https://', 'wss://');
-      final wsUrl = Uri.parse('$baseWsUrl$apiPrefix/ws/conversations/$convId/messages');
+      final uri = Uri.parse(apiBaseUrl);
+      final wsScheme = uri.scheme == 'https' ? 'wss' : 'ws';
+      final wsUrl = uri.replace(
+        scheme: wsScheme,
+        path: '$apiPrefix/chat/ws/conversations/$convId/messages',
+      );
       
       _channel = WebSocketChannel.connect(wsUrl);
       
@@ -116,15 +121,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void _sendMessage() {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
-    
+
     final currentUser = ref.read(authProvider).user;
     if (currentUser != null) {
-      // Optimsitic UI Update
+      // Optimistic UI update
       final optimisticMsg = InternalMessage(
         id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
         senderId: currentUser.id,
         senderName: currentUser.name,
-        receiverId: '', 
+        receiverId: '',
         content: text,
         isRead: true,
         createdAt: DateTime.now(),
@@ -134,11 +139,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
 
     HapticFeedback.lightImpact();
-    if (_channel != null) {
+    final isOnline = ref.read(isOnlineProvider);
+    if (isOnline && _channel != null) {
       _channel!.sink.add(jsonEncode({
         "type": "message",
         "content": text,
       }));
+    } else if (!isOnline) {
+      ref.read(offlineStorageProvider).addToSyncQueue({
+        'type': 'send_staff_message',
+        'grievance_id': widget.grievanceId,
+        'content': text,
+      });
     }
     _messageController.clear();
   }

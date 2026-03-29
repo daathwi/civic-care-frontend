@@ -10,6 +10,7 @@ class FieldWorker {
   final Department department;
   final String lastActiveWard;
   final double rating;
+  final int ratingsCount;
   final int tasksCompleted;
   final int tasksActive;
   final FieldWorkerStatus status;
@@ -24,6 +25,7 @@ class FieldWorker {
     required this.department,
     required this.lastActiveWard,
     required this.rating,
+    this.ratingsCount = 0,
     this.tasksCompleted = 0,
     this.tasksActive = 0,
     this.status = FieldWorkerStatus.onDuty,
@@ -46,6 +48,7 @@ class FieldWorker {
       department: department,
       lastActiveWard: lastActiveWard,
       rating: rating,
+      ratingsCount: ratingsCount,
       tasksCompleted: tasksCompleted ?? this.tasksCompleted,
       tasksActive: tasksActive ?? this.tasksActive,
       status: status ?? this.status,

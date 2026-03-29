@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/user_models.dart';
 import '../providers/auth_provider.dart';
+import '../providers/analytics_provider.dart';
 import '../providers/complaint_provider.dart';
 import '../core/app_theme.dart';
 import '../utils/responsive_utils.dart';
+import '../utils/launch_links.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CivicCare Profile — Apple Native Premium
@@ -24,6 +26,7 @@ class ProfileScreen extends ConsumerWidget {
         effectiveUser?.name ?? ref.watch(userNameProvider) ?? 'Guest';
     final userWard = ref.watch(userWardProvider);
     final complaints = ref.watch(complaintListProvider);
+    final cisAsync = ref.watch(userCisProvider);
 
     final myComplaints =
         complaints.where((c) => c.userName == userName).toList();
@@ -40,6 +43,7 @@ class ProfileScreen extends ConsumerWidget {
             userWard,
             effectiveUser,
             myComplaints,
+            cisAsync,
             profileDetails: details,
             loadError: loadError,
           );
@@ -134,7 +138,8 @@ class ProfileScreen extends ConsumerWidget {
     String userName,
     String userWard,
     UserProfile? effectiveUser,
-    List myComplaints, {
+    List myComplaints,
+    AsyncValue<CisResult?> cisAsync, {
     Map<String, dynamic>? profileDetails,
     String? loadError,
   }) {
@@ -159,6 +164,7 @@ class ProfileScreen extends ConsumerWidget {
     final designationTitle = wp?['designation_title'] as String?;
     final isStaff = effectiveUser?.isStaff == true;
     final rating = wp?['rating'] as num?;
+    final ratingsCount = wp?['ratings_count'] is int ? wp!['ratings_count'] as int : 0;
     final currentStatus = wp?['current_status'] as String?;
 
     return Material(
@@ -344,6 +350,12 @@ class ProfileScreen extends ConsumerWidget {
 
             const SizedBox(height: 28),
 
+            // ── Civic Impact Score (Citizens only) ──
+            if (!isStaff) ...[
+              _buildCisBanner(context, cisAsync),
+              const SizedBox(height: 24),
+            ],
+
             // ── Performance Stats Row (Staff only) ──
             if (isStaff) ...[
               Row(
@@ -352,8 +364,8 @@ class ProfileScreen extends ConsumerWidget {
                     icon: Icons.star_rounded,
                     iconColor: const Color(0xFFFFB800),
                     label: 'Rating',
-                    value: rating != null
-                        ? rating.toStringAsFixed(1)
+                    value: rating != null && ratingsCount > 0
+                        ? '${rating.toStringAsFixed(1)} ($ratingsCount)'
                         : '—',
                   ),
                   const SizedBox(width: 12),
@@ -388,6 +400,9 @@ class ProfileScreen extends ConsumerWidget {
                   icon: Icons.phone_rounded,
                   label: 'Phone',
                   value: phone,
+                  onValueTap: phone != '--' && phone.trim().isNotEmpty
+                      ? () => launchPhoneDialer(phone)
+                      : null,
                 ),
                 _BentoRow(
                   icon: Icons.location_on_rounded,
@@ -514,6 +529,324 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(height: 120),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildCisBanner(BuildContext context, AsyncValue<CisResult?> cisAsync) {
+    return cisAsync.when(
+      data: (cis) {
+        if (cis == null) return const SizedBox.shrink();
+
+        // Determine badge tier
+        String tier = 'Contributor';
+        Color badgeColor = AppTheme.primary;
+        if (cis.pending) {
+          tier = 'Pending';
+          badgeColor = AppTheme.textSecondary;
+        } else if (cis.totalScore >= 80) {
+          tier = 'Civic Leader';
+          badgeColor = const Color(0xFFFFB800); // Gold
+        } else if (cis.totalScore >= 50) {
+          tier = 'Active Patriot';
+          badgeColor = AppTheme.success;
+        } else if (cis.totalScore < 20) {
+          tier = 'Novice';
+          badgeColor = AppTheme.textSecondary;
+        }
+
+        return GestureDetector(
+          onTap: () {
+            if (cis.pending) return;
+            HapticFeedback.lightImpact();
+            _showCisBreakdown(context, cis);
+          },
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppTheme.primary,
+                  AppTheme.primary.withValues(alpha: 0.8),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primary.withValues(alpha: 0.3),
+                  blurRadius: 15,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.diamond_rounded,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Civic Impact Score',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white.withValues(alpha: 0.8),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(
+                            cis.pending ? '—' : cis.totalScore.toStringAsFixed(1),
+                            style: GoogleFonts.outfit(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              height: 1.1,
+                            ),
+                          ),
+                          if (!cis.pending) ...[
+                            const SizedBox(width: 4),
+                            Text(
+                              '/ 100',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    tier,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: badgeColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
+  void _showCisBreakdown(BuildContext context, CisResult cis) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: AppTheme.border,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Score Methodology Breakdown',
+                  style: GoogleFonts.outfit(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Your 100-point Civic Impact Score quantifies your contribution using five verified metrics.',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                
+                // Metrics
+                _buildBreakdownRow(
+                  'Ward Contribution Ratio (WCR)',
+                  'Active grievances reported in your ward.',
+                  cis.breakdown['WCR'] ?? 0,
+                  30.0,
+                  Icons.report_gmailerrorred_rounded,
+                ),
+                _buildBreakdownRow(
+                  'Upvote Genesis Impact (UGI)',
+                  'Community validation of your reports.',
+                  cis.breakdown['UGI'] ?? 0,
+                  20.0,
+                  Icons.thumb_up_alt_rounded,
+                ),
+                _buildBreakdownRow(
+                  'Civic Validation Participation (CVP)',
+                  'Your upvoting activity across the platform.',
+                  cis.breakdown['CVP'] ?? 0,
+                  20.0,
+                  Icons.how_to_vote_rounded,
+                ),
+                _buildBreakdownRow(
+                  'Consistency Index (CI)',
+                  'Sustained engagement since registration.',
+                  cis.breakdown['CI'] ?? 0,
+                  15.0,
+                  Icons.calendar_month_rounded,
+                ),
+                _buildBreakdownRow(
+                  'Noise Prevention Factor (NPF)',
+                  'Report authenticity & spam avoidance.',
+                  cis.breakdown['NPF'] ?? 0,
+                  15.0,
+                  Icons.verified_user_rounded,
+                ),
+                
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: Text(
+                      'Done',
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBreakdownRow(
+    String title,
+    String desc,
+    double value,
+    double max,
+    IconData icon,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 20, color: AppTheme.primary),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${value.toStringAsFixed(1)} / ${max.toInt()}',
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  desc,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                LinearProgressIndicator(
+                  value: value / max,
+                  backgroundColor: AppTheme.border,
+                  valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                  borderRadius: BorderRadius.circular(4),
+                  minHeight: 6,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -668,6 +1001,8 @@ class _BentoRow extends StatelessWidget {
   final String value;
   final bool showDivider;
   final Widget? trailing;
+  /// Opens dialer when set (e.g. phone row).
+  final VoidCallback? onValueTap;
 
   const _BentoRow({
     required this.icon,
@@ -675,6 +1010,7 @@ class _BentoRow extends StatelessWidget {
     required this.value,
     this.showDivider = true,
     this.trailing,
+    this.onValueTap,
   });
 
   @override
@@ -707,16 +1043,36 @@ class _BentoRow extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      value,
-                      style: GoogleFonts.inter(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textPrimary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    onValueTap != null
+                        ? InkWell(
+                            onTap: onValueTap,
+                            borderRadius: BorderRadius.circular(6),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2),
+                              child: Text(
+                                value,
+                                style: GoogleFonts.inter(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.primary,
+                                  decoration: TextDecoration.underline,
+                                  decorationColor: AppTheme.primary.withValues(alpha: 0.4),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
+                        : Text(
+                            value,
+                            style: GoogleFonts.inter(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textPrimary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                   ],
                 ),
               ),

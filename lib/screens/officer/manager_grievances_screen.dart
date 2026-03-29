@@ -7,6 +7,7 @@ import '../../providers/complaint_provider.dart';
 import '../../core/app_theme.dart';
 import '../../utils/responsive_utils.dart';
 import '../complaint_detail/complaint_detail_screen.dart';
+import '../map_screen.dart';
 
 class ManagerGrievancesScreen extends ConsumerStatefulWidget {
   const ManagerGrievancesScreen({super.key});
@@ -19,13 +20,16 @@ class ManagerGrievancesScreen extends ConsumerStatefulWidget {
 class _ManagerGrievancesScreenState
     extends ConsumerState<ManagerGrievancesScreen> {
   String _searchQuery = '';
-  ComplaintStatus? _statusFilter;
+  ComplaintStatus? _statusFilter = ComplaintStatus.incompleteUnassigned;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(managerGrievancesProvider.notifier).loadGrievances(limit: 10);
+      ref.read(managerGrievancesProvider.notifier).loadGrievances(
+        limit: 10,
+        status: ComplaintStatus.incompleteUnassigned,
+      );
     });
   }
 
@@ -141,7 +145,10 @@ class _ManagerGrievancesScreenState
                       ),
                     ),
                     const SizedBox(height: 16),
-                    SingleChildScrollView(
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       physics: const BouncingScrollPhysics(),
                       child: Row(
@@ -230,8 +237,77 @@ class _ManagerGrievancesScreenState
                             },
                             accent: AppTheme.primary,
                           ),
+                          const SizedBox(width: 10),
+                          _FilterChip(
+                            label: 'Escalated',
+                            selected:
+                                _statusFilter == ComplaintStatus.escalated,
+                            onTap: () {
+                              setState(
+                                () => _statusFilter =
+                                    ComplaintStatus.escalated,
+                              );
+                              ref
+                                  .read(managerGrievancesProvider.notifier)
+                                  .loadGrievances(
+                                    limit: 10,
+                                    status: ComplaintStatus.escalated,
+                                  );
+                            },
+                            accent: AppTheme.error,
+                          ),
                         ],
                       ),
+                    ),
+                        ),
+                        const SizedBox(width: 8),
+                        Material(
+                          color: AppTheme.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(14),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(14),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => MapScreen(
+                                    grievanceSourceProvider:
+                                        managerGrievancesProvider,
+                                    searchQuery: _searchQuery.isEmpty
+                                        ? null
+                                        : _searchQuery,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.map_rounded,
+                                    size: 20,
+                                    color: AppTheme.primary,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Map',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppTheme.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -461,6 +537,7 @@ class _GrievanceCard extends StatelessWidget {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
+                      // Removed AI RECOMMENDED badge as assignments are automatic now
                     ],
                   ),
                 ),

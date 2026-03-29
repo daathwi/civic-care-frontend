@@ -139,7 +139,9 @@ IconData iconFromApi(String? iconName) {
     case 'cleaning_services':
       return Icons.cleaning_services;
     case 'report_problem':
-      return Icons.report_problem;
+    case 'warning_rounded':
+    case 'warning':
+      return Icons.warning_rounded;
     case 'bolt':
       return Icons.bolt;
     default:
@@ -168,6 +170,7 @@ IconData iconFromEventTitle(String? title) {
     return Icons.update_rounded;
   }
   if (t.contains('pending')) return Icons.schedule_rounded;
+  if (t.contains('escalated')) return Icons.warning_rounded;
   return Icons.info_outline;
 }
 
@@ -190,6 +193,7 @@ String _eventDescriptionFallback(String? description, String? title) {
     return 'Status updated to in progress.';
   }
   if (t.contains('pending')) return 'Status set to pending.';
+  if (t.contains('escalated')) return 'Grievance escalated for SLA breach.';
   return 'Status updated.';
 }
 
@@ -353,5 +357,8 @@ Complaint complaintFromApi(
     citizenRating: m['citizen_rating'] as int?,
     reopenCount: m['reopen_count'] as int? ?? 0,
     departmentDisplayName: departmentDisplayName,
+    aiSuggestedWorkerId: m['ai_suggested_worker_id'] != null ? _idStr(m['ai_suggested_worker_id']) : null,
+    aiSuggestedWorkerName: m['ai_suggested_worker_name'] as String?,
+    aiSuggestionReason: m['ai_suggestion_reason'] as String?,
   );
 }

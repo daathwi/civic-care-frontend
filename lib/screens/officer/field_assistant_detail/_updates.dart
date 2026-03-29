@@ -432,13 +432,15 @@ extension _FADetailUpdates on _FieldAssistantTaskDetailState {
 
   Widget _buildBottomActions(
     Complaint c,
-    bool canAct,
+    bool canStartWork,
+    bool canCaptureResolve,
     bool clockedIn,
     bool atSite,
   ) {
     if (c.status == ComplaintStatus.completed) return const SizedBox.shrink();
 
     final isPending = c.status == ComplaintStatus.incompleteAssigned;
+    final canAct = isPending ? canStartWork : canCaptureResolve;
     final label = isPending ? 'START WORKING' : 'CAPTURE RESOLUTION';
     final icon = isPending
         ? Icons.play_arrow_rounded

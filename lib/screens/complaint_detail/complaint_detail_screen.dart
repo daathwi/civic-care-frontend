@@ -20,6 +20,7 @@ import '../../repository/grievance_mappers.dart' show eventAccentColor;
 import '../../widgets/civic_ui.dart';
 import '../../widgets/sensitive_blur_wrapper.dart';
 import '../../widgets/audio_player_widget.dart';
+import '../../utils/launch_links.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../officer/chat_screen.dart';
 
@@ -66,6 +67,8 @@ class _ComplaintDetailScreenState extends ConsumerState<ComplaintDetailScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Ensure complaint is in complaintProvider so offline comments show optimistically
+      ref.read(complaintProvider.notifier).ensureComplaintInList(widget.complaint);
       ref
           .read(complaintProvider.notifier)
           .refreshGrievanceDetail(widget.complaint.id);
@@ -73,8 +76,11 @@ class _ComplaintDetailScreenState extends ConsumerState<ComplaintDetailScreen> {
     });
   }
 
+  bool _isDisposed = false;
+  
   @override
   void dispose() {
+    _isDisposed = true;
     _commentController.dispose();
     _commentScrollController.dispose();
     _wsChannel?.sink.close();
@@ -84,13 +90,13 @@ class _ComplaintDetailScreenState extends ConsumerState<ComplaintDetailScreen> {
   // ── WebSocket ─────────────────────────────────────────────────────────────
 
   void _connectWebSocket() {
-    final baseWsUrl = apiBaseUrl
-        .replaceFirst('http://', 'ws://')
-        .replaceFirst('https://', 'wss://');
-    final wsUrl = Uri.parse(
-      '$baseWsUrl$apiPrefix/ws/grievances/${widget.complaint.id}/comments',
+    final uri = Uri.parse(apiBaseUrl);
+    final wsScheme = uri.scheme == 'https' ? 'wss' : 'ws';
+    final wsUrl = uri.replace(
+      scheme: wsScheme,
+      path: '$apiPrefix/chat/ws/grievances/${widget.complaint.id}/comments',
     );
-
+    debugPrint('DEBUG: Connecting to Comments WebSocket: $wsUrl');
     try {
       _wsChannel = WebSocketChannel.connect(wsUrl);
 
@@ -119,22 +125,32 @@ class _ComplaintDetailScreenState extends ConsumerState<ComplaintDetailScreen> {
                   .read(complaintProvider.notifier)
                   .addCommentLocal(widget.complaint.id, newComment);
               _scrollToBottom();
-            } else if (msg['type'] == 'auth_error' || msg['type'] == 'error') {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(msg['message'] ?? 'Chat connection error'),
-                    backgroundColor: Colors.redAccent,
-                  ),
-                );
-              }
             }
-          } catch (_) {}
+          } catch (e) {
+            debugPrint('DEBUG: Error parsing WS message: $e');
+          }
         },
-        onDone: () => _wsChannel = null,
-        onError: (_) => _wsChannel = null,
+        onDone: () {
+          debugPrint('DEBUG: Comments WebSocket closed (onDone)');
+          _wsChannel = null;
+          if (!_isDisposed) {
+            Future.delayed(const Duration(seconds: 3), () => _connectWebSocket());
+          }
+        },
+        onError: (err) {
+          debugPrint('DEBUG: Comments WebSocket error: $err');
+          _wsChannel = null;
+          if (!_isDisposed) {
+            Future.delayed(const Duration(seconds: 5), () => _connectWebSocket());
+          }
+        },
       );
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('DEBUG: Failed to connect to WS: $e');
+      if (!_isDisposed) {
+        Future.delayed(const Duration(seconds: 10), () => _connectWebSocket());
+      }
+    }
   }
 
   void _scrollToBottom() {

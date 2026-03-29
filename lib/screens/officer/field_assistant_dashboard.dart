@@ -10,8 +10,10 @@ import '../../models/user_models.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/attendance_provider.dart';
 import '../../providers/complaint_provider.dart';
+import '../../providers/worker_nav_provider.dart';
 import '../../core/app_theme.dart';
 import '../../utils/responsive_utils.dart';
+import '../../widgets/ward_weather_widget.dart';
 import '../map_screen.dart';
 
 
@@ -136,6 +138,17 @@ class _FieldAssistantDashboardState
       });
     });
 
+    ref.listen(workerSelectedTabProvider, (prev, next) {
+      if (next == 0) {
+        final user = ref.read(authProvider).user;
+        if (user != null) {
+          ref.read(complaintProvider.notifier).loadGrievances(workerId: user.id);
+          ref.read(attendanceProvider.notifier).fetchStatus();
+          ref.read(attendanceProvider.notifier).fetchHistory();
+        }
+      }
+    });
+
     final user = ref.watch(authProvider).user!;
     final complaints = ref.watch(complaintListProvider);
     final mine = complaints.where((c) => c.assignedToId == user.id).toList();
@@ -197,29 +210,31 @@ class _FieldAssistantDashboardState
 
                   // Attendance Card
                   _AttendanceCard(pulseCtrl: _pulseCtrl),
+                  const SizedBox(height: 20),
+                  const WardWeatherWidget(),
                   const SizedBox(height: 28),
 
                   // Task Summary
-                  _SectionLabel(label: 'MY WORKLOAD'),
-                  const SizedBox(height: 14),
+                  _SectionLabel(label: 'My Workload'),
+                  const SizedBox(height: 12),
                   _TaskSummaryRow(mine: mine),
                   const SizedBox(height: 28),
 
                   // Performance
-                  _SectionLabel(label: 'PERFORMANCE'),
-                  const SizedBox(height: 14),
+                  _SectionLabel(label: 'Performance'),
+                  const SizedBox(height: 12),
                   _PerformanceSection(mine: mine),
                   const SizedBox(height: 28),
 
                   // Quick Actions
-                  _SectionLabel(label: 'QUICK ACTIONS'),
-                  const SizedBox(height: 14),
-                  const _QuickActionsRow(),
+                  _SectionLabel(label: 'Quick Actions'),
+                  const SizedBox(height: 12),
+                  _QuickActionsRow(),
                   const SizedBox(height: 28),
 
                   // Recent Activity
-                  _SectionLabel(label: 'RECENT ACTIVITY'),
-                  const SizedBox(height: 14),
+                  _SectionLabel(label: 'Recent Activity'),
+                  const SizedBox(height: 12),
                   _RecentActivitySection(mine: mine),
 
                   SizedBox(
@@ -248,9 +263,8 @@ class _SectionLabel extends StatelessWidget {
     return Text(
       label,
       style: GoogleFonts.inter(
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.2,
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
         color: AppTheme.textSecondary,
       ),
     );
@@ -258,7 +272,7 @@ class _SectionLabel extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 1. Hero Banner
+// 1. Hero Banner — Clean, light, Apple native
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class _HeroBanner extends StatelessWidget {
@@ -269,144 +283,117 @@ class _HeroBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final now = DateTime.now();
 
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppTheme.primary, AppTheme.primaryDark],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: AppTheme.cardDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-      ),
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${_greeting()},',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white.withValues(alpha: 0.65),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      user.name.split(' ').first,
-                      style: GoogleFonts.outfit(
-                        fontSize: 30,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                        height: 1.2,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.08),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  _greeting(),
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.textSecondary,
                   ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      _fmtTime12(now),
-                      style: GoogleFonts.outfit(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white.withValues(alpha: 0.9),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _fmtDate(now),
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white.withValues(alpha: 0.5),
-                      ),
-                    ),
-                  ],
+                Text(
+                  _fmtTime12(now),
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              user.name.split(' ').first,
+              style: GoogleFonts.outfit(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimary,
+                height: 1.2,
+                letterSpacing: -0.5,
               ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _RoleBadge(
-                icon: Icons.shield_rounded,
-                label: user.department?.assistantTitle ?? 'Field Assistant',
-                bright: true,
-              ),
-              if (user.ward.isNotEmpty)
-                _RoleBadge(
-                  icon: Icons.location_on_rounded,
-                  label: user.ward,
-                  bright: false,
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                _Pill(
+                  icon: Icons.badge_outlined,
+                  label: user.department?.assistantTitle ?? 'Field Assistant',
                 ),
-            ],
-          ),
-        ],
+                if (user.ward.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  _Pill(
+                    icon: Icons.location_on_outlined,
+                    label: user.ward,
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _fmtDate(now),
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.textSecondary.withValues(alpha: 0.8),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _RoleBadge extends StatelessWidget {
+class _Pill extends StatelessWidget {
   final IconData icon;
   final String label;
-  final bool bright;
-  const _RoleBadge({
-    required this.icon,
-    required this.label,
-    required this.bright,
-  });
+  const _Pill({required this.icon, required this.label});
 
   @override
   Widget build(BuildContext context) {
-    final fg = bright
-        ? Colors.white.withValues(alpha: 0.92)
-        : Colors.white.withValues(alpha: 0.65);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: bright ? 0.15 : 0.08),
-        borderRadius: BorderRadius.circular(20),
-        border: bright
-            ? Border.all(color: Colors.white.withValues(alpha: 0.15))
-            : null,
+        color: AppTheme.primaryLight,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: AppTheme.primary.withValues(alpha: 0.25),
+          width: 1,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: fg),
+          Icon(icon, size: 13, color: AppTheme.primary),
           const SizedBox(width: 6),
           Text(
             label,
             style: GoogleFonts.inter(
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: fg,
+              color: AppTheme.primary,
             ),
           ),
         ],
@@ -428,29 +415,18 @@ class _AttendanceCard extends ConsumerWidget {
     final att = ref.watch(attendanceProvider);
     final notifier = ref.read(attendanceProvider.notifier);
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 600),
-      curve: Curves.easeOutCubic,
-      decoration: att.isClockedIn
-          ? BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [AppTheme.primary, AppTheme.primaryDark],
-              ),
-              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.primary.withValues(alpha: 0.30),
-                  blurRadius: 32,
-                  offset: const Offset(0, 12),
-                  spreadRadius: -4,
-                ),
-              ],
-            )
-          : AppTheme.cardDecoration(),
+    return Container(
+      decoration: AppTheme.cardDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         child: att.isClockedIn
             ? _ClockedInView(att: att, notifier: notifier)
             : _ClockedOutView(
@@ -474,22 +450,17 @@ class _ClockedInView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Header row
         Row(
           children: [
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(14),
+                color: AppTheme.primaryLight,
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
-                Icons.timer_rounded,
-                color: Colors.white,
-                size: 22,
-              ),
+              child: const Icon(Icons.schedule_rounded, color: AppTheme.primary, size: 22),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -497,19 +468,18 @@ class _ClockedInView extends StatelessWidget {
                   Text(
                     'ON DUTY',
                     style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.5,
-                      color: Colors.white.withValues(alpha: 0.5),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1,
+                      color: AppTheme.textSecondary,
                     ),
                   ),
-                  const SizedBox(height: 2),
                   Text(
                     'Shift Active',
                     style: GoogleFonts.outfit(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimary,
                     ),
                   ),
                 ],
@@ -518,36 +488,31 @@ class _ClockedInView extends StatelessWidget {
             _LiveDot(),
           ],
         ),
-        const SizedBox(height: 32),
-
-        // Timer display
+        const SizedBox(height: 24),
         Text(
           att.dutyDurationFormatted,
-          style: GoogleFonts.robotoMono(
-            fontSize: 48,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-            letterSpacing: 3,
+          style: GoogleFonts.outfit(
+            fontSize: 44,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textPrimary,
+            letterSpacing: 0.5,
+            fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),
-        const SizedBox(height: 6),
         Text(
-          'HOURS : MINUTES : SECONDS',
+          'Hours · Minutes · Seconds',
           style: GoogleFonts.inter(
-            fontSize: 9,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 2.5,
-            color: Colors.white.withValues(alpha: 0.3),
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: AppTheme.textSecondary,
           ),
         ),
-        const SizedBox(height: 28),
-
-        // Stats row
+        const SizedBox(height: 20),
         Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(16),
+            color: AppTheme.surfaceScaffold,
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
             children: [
@@ -555,35 +520,30 @@ class _ClockedInView extends StatelessWidget {
                 child: _ClockStat(
                   icon: Icons.login_rounded,
                   label: 'Clocked In',
-                  value: att.isClockedIn
-                      ? (att.clockInTime != null
-                          ? '${_fmtTime12(att.clockInTime!)}\n${att.dutyDurationFormatted}'
-                          : '--:--')
+                  value: att.clockInTime != null
+                      ? _fmtTime12(att.clockInTime!)
                       : '--:--',
                 ),
               ),
               Container(
                 width: 1,
-                height: 36,
-                color: Colors.white.withValues(alpha: 0.1),
+                height: 32,
+                color: AppTheme.border,
               ),
               Expanded(
                 child: _ClockStat(
                   icon: Icons.gps_fixed_rounded,
                   label: 'Location',
-                  value:
-                      att.currentLocation != null ? 'Tracking' : 'Waiting...',
+                  value: att.currentLocation != null ? 'Tracking' : 'Waiting...',
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 24),
-
-        // End Shift button
+        const SizedBox(height: 20),
         SizedBox(
           width: double.infinity,
-          height: 52,
+          height: 50,
           child: ElevatedButton.icon(
             onPressed: att.isLoading
                 ? null
@@ -609,14 +569,11 @@ class _ClockedInView extends StatelessWidget {
               ),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white.withValues(alpha: 0.12),
+              backgroundColor: AppTheme.primary,
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-                side: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.18),
-                ),
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
           ),
@@ -677,26 +634,25 @@ class _ClockStat extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(icon, size: 16, color: Colors.white.withValues(alpha: 0.4)),
+        Icon(icon, size: 16, color: AppTheme.textSecondary),
         const SizedBox(width: 8),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              label.toUpperCase(),
+              label,
               style: GoogleFonts.inter(
-                fontSize: 9,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1,
-                color: Colors.white.withValues(alpha: 0.4),
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.textSecondary,
               ),
             ),
             Text(
               value,
               style: GoogleFonts.outfit(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textPrimary,
               ),
             ),
           ],
@@ -827,14 +783,11 @@ class _TaskSummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final active =
-        mine.where((c) => c.status == ComplaintStatus.ongoing).length;
-    final pending =
-        mine
-            .where((c) => c.status == ComplaintStatus.incompleteAssigned)
-            .length;
-    final completed =
-        mine.where((c) => c.status == ComplaintStatus.completed).length;
+    final c = statusCounts(mine);
+    final active = c.inProgress;
+    final pending = c.assigned;
+    final completed = c.resolved;
+    final escalated = c.escalated;
 
     return Row(
       children: [
@@ -867,6 +820,16 @@ class _TaskSummaryRow extends StatelessWidget {
             label: 'Done',
           ),
         ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _StatCard(
+            icon: Icons.warning_amber_rounded,
+            iconBg: AppTheme.error.withValues(alpha: 0.12),
+            iconColor: AppTheme.error,
+            count: escalated,
+            label: 'Escalated',
+          ),
+        ),
       ],
     );
   }
@@ -890,7 +853,15 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: AppTheme.cardDecoration(),
+      decoration: AppTheme.cardDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -902,22 +873,22 @@ class _StatCard extends StatelessWidget {
             ),
             child: Icon(icon, size: 18, color: iconColor),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           Text(
             '$count',
             style: GoogleFonts.outfit(
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
               color: AppTheme.textPrimary,
               height: 1,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(
             label,
             style: GoogleFonts.inter(
               fontSize: 12,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               color: AppTheme.textSecondary,
             ),
           ),
@@ -939,10 +910,9 @@ class _PerformanceSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final att = ref.watch(attendanceProvider);
     final total = mine.length;
-    final resolved =
-        mine.where((c) => c.status == ComplaintStatus.completed).length;
+    final resolved = statusCounts(mine).resolved;
     final rate = total == 0 ? 0.0 : resolved / total;
-    final shiftHrs = att.isClockedIn ? att.dutyDuration.inMinutes / 60.0 : 0.0;
+    final shiftHrs = att.isClockedIn ? att.dutyDurationHoursExact : 0.0;
     final today = DateTime.now().weekday;
 
     return Row(
@@ -959,7 +929,10 @@ class _PerformanceSection extends ConsumerWidget {
         Expanded(
           child: Column(
             children: [
-              _ShiftHoursCard(hours: shiftHrs),
+              _ShiftHoursCard(
+                hoursProgress: shiftHrs,
+                durationLabel: att.isClockedIn ? att.dutyDurationShortLabel : '0s',
+              ),
               const SizedBox(height: 12),
               _WeeklyCard(today: today),
             ],
@@ -1033,11 +1006,21 @@ class _CompletionRingCard extends StatelessWidget {
 }
 
 class _ShiftHoursCard extends StatelessWidget {
-  final double hours;
-  const _ShiftHoursCard({required this.hours});
+  /// Fraction of an 8h shift (0–∞; bar clamps at 100%).
+  final double hoursProgress;
+  /// Human-readable elapsed time (not decimal hours — avoids 0.56 vs 0.0 confusion).
+  final String durationLabel;
+
+  const _ShiftHoursCard({
+    required this.hoursProgress,
+    required this.durationLabel,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final bar = (hoursProgress / 8).clamp(0.0, 1.0);
+    final fullShift = hoursProgress >= 8;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
@@ -1068,7 +1051,7 @@ class _ShiftHoursCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                hours.toStringAsFixed(1),
+                durationLabel,
                 style: GoogleFonts.outfit(
                   fontSize: 28,
                   fontWeight: FontWeight.w800,
@@ -1077,7 +1060,7 @@ class _ShiftHoursCard extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.only(left: 4, bottom: 2),
+                padding: const EdgeInsets.only(left: 6, bottom: 2),
                 child: Text(
                   '/ 8h',
                   style: GoogleFonts.inter(
@@ -1093,11 +1076,11 @@ class _ShiftHoursCard extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
-              value: (hours / 8).clamp(0.0, 1.0),
+              value: bar,
               minHeight: 6,
               backgroundColor: AppTheme.surface,
               valueColor: AlwaysStoppedAnimation<Color>(
-                hours >= 8 ? AppTheme.success : AppTheme.primary,
+                fullShift ? AppTheme.success : AppTheme.primary,
               ),
             ),
           ),
@@ -1238,33 +1221,33 @@ class _RingPainter extends CustomPainter {
 // 5. Quick Actions
 // ═══════════════════════════════════════════════════════════════════════════════
 
-class _QuickActionsRow extends StatelessWidget {
+class _QuickActionsRow extends ConsumerWidget {
   const _QuickActionsRow();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Row(
       children: [
         Expanded(
           child: _ActionTile(
             icon: Icons.task_alt_rounded,
-            label: 'My Tasks',
+            label: 'Tasks',
             color: AppTheme.primary,
             bg: AppTheme.primaryLight,
             onTap: () {
-              DefaultTabController.of(context).animateTo(1); // Tasks tab
+              ref.read(workerTabToSelectProvider.notifier).state = 1;
             },
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: _ActionTile(
-            icon: Icons.assignment_ind_rounded,
-            label: 'Assignments',
-            color: AppTheme.info,
-            bg: AppTheme.info.withValues(alpha: 0.10),
+            icon: Icons.schedule_rounded,
+            label: 'Attendance',
+            color: AppTheme.success,
+            bg: AppTheme.success.withValues(alpha: 0.10),
             onTap: () {
-              DefaultTabController.of(context).animateTo(1); // Same as tasks for now
+              ref.read(workerTabToSelectProvider.notifier).state = 2;
             },
           ),
         ),
@@ -1273,8 +1256,8 @@ class _QuickActionsRow extends StatelessWidget {
           child: _ActionTile(
             icon: Icons.map_rounded,
             label: 'Map View',
-            color: AppTheme.success,
-            bg: AppTheme.success.withValues(alpha: 0.10),
+            color: AppTheme.info,
+            bg: AppTheme.info.withValues(alpha: 0.10),
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const MapScreen()),
@@ -1304,39 +1287,39 @@ class _ActionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+      color: AppTheme.cardBg,
+      borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: () {
           HapticFeedback.lightImpact();
           onTap?.call();
         },
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius: BorderRadius.circular(14),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 24),
+          padding: const EdgeInsets.symmetric(vertical: 20),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+            borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
+                blurRadius: 12,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
           child: Column(
             children: [
               Container(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
-                child: Icon(icon, color: color, size: 22),
+                child: Icon(icon, color: color, size: 20),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Text(
                 label,
                 style: GoogleFonts.inter(
                   fontSize: 12,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                   color: AppTheme.textSecondary,
                 ),
               ),

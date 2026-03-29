@@ -13,6 +13,10 @@ import '../../core/app_theme.dart';
 import '../../utils/responsive_utils.dart';
 import '../complaint_detail/complaint_detail_screen.dart';
 import '../map_screen.dart';
+import '../../widgets/ward_weather_widget.dart';
+import 'worker_directory_screen.dart';
+import 'escalation_priority_screen.dart';
+
 
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -141,25 +145,15 @@ class _FieldManagerDashboardState extends ConsumerState<FieldManagerDashboard> {
     final apiReturnedNoData =
         allComplaints.isEmpty && workers.isEmpty && workerLoadError == null;
 
-    final resolved = myComplaints
-        .where((c) => c.status == ComplaintStatus.completed)
-        .length;
-    final assigned = myComplaints
-        .where((c) => c.status == ComplaintStatus.incompleteAssigned)
-        .length;
-    final pending = myComplaints
-        .where((c) => c.status == ComplaintStatus.incompleteUnassigned)
-        .length;
-    final inProgress = myComplaints
-        .where((c) => c.status == ComplaintStatus.ongoing)
-        .length;
+    final counts = statusCounts(myComplaints);
+    final resolved = counts.resolved;
+    final assigned = counts.assigned;
+    final pending = counts.pending;
+    final inProgress = counts.inProgress;
+    final escalated = counts.escalated;
     final onDuty = myWorkers
         .where((w) => w.status == FieldWorkerStatus.onDuty)
         .length;
-    final escalated = myComplaints.where((c) {
-      if (c.status == ComplaintStatus.completed) return false;
-      return DateTime.now().difference(c.date).inHours > 48;
-    }).length;
 
     return ResponsiveLayout(
       mobile: _MobileLayout(
@@ -281,7 +275,7 @@ class _MobileLayout extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: AppTheme.primary.withValues(alpha: 0.3),
+                          color: AppTheme.primary.withOpacity(0.3),
                           blurRadius: 20,
                           offset: const Offset(0, 8),
                           spreadRadius: -4,
@@ -297,7 +291,7 @@ class _MobileLayout extends ConsumerWidget {
                               Text(
                                 _greeting(),
                                 style: GoogleFonts.inter(
-                                  color: Colors.white.withValues(alpha: 0.8),
+                                  color: Colors.white.withOpacity(0.8),
                                   fontSize: 14,
                                 ),
                               ),
@@ -326,8 +320,8 @@ class _MobileLayout extends ConsumerWidget {
                                 value: score / 100,
                                 strokeWidth: 6,
                                 color: Colors.white,
-                                backgroundColor: Colors.white.withValues(
-                                  alpha: 0.2,
+                                backgroundColor: Colors.white.withOpacity(
+                                  0.2,
                                 ),
                                 strokeCap: StrokeCap.round,
                               ),
@@ -345,6 +339,8 @@ class _MobileLayout extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 20),
+                  const WardWeatherWidget(),
                   const SizedBox(height: 32),
 
                   _SectionLabel('SYSTEM OVERVIEW'),
@@ -576,6 +572,8 @@ class _WebLayout extends ConsumerWidget {
                   ],
                 ),
               ),
+              const SizedBox(height: 24),
+              const WardWeatherWidget(),
               const SizedBox(height: 32),
 
               if (escalated > 0)
@@ -609,7 +607,7 @@ class _WebLayout extends ConsumerWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        '$escalated grievances have exceeded the 48h SLA response time.',
+                        '$escalated escalated grievances need immediate attention.',
                         style: GoogleFonts.inter(
                           color: AppTheme.textPrimary.withValues(alpha: 0.7),
                           fontSize: 14,
@@ -717,10 +715,26 @@ class _WebLayout extends ConsumerWidget {
                           ),
                         ),
                         _webActionTile(
+                          icon: Icons.priority_high_rounded,
+                          label: 'PRIORITY ANALYSIS',
+                          color: Colors.deepOrange,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const EscalationPriorityScreen(),
+                            ),
+                          ),
+                        ),
+                        _webActionTile(
                           icon: Icons.groups_rounded,
                           label: 'STAFF DIRECTORY',
                           color: Colors.teal,
-                          onTap: () {},
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const WorkerDirectoryScreen(),
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -1427,7 +1441,11 @@ class _AssignDialogState extends State<_AssignDialog> {
                       ),
                     ),
                     subtitle: Text(
-                      '${w.designation}  ·  ${w.tasksActive} active',
+                      [
+                        w.designation,
+                        '${w.tasksActive} active',
+                        if (w.ratingsCount > 0) '★ ${w.rating.toStringAsFixed(1)} (${w.ratingsCount})',
+                      ].join('  ·  '),
                       style: const TextStyle(fontSize: 11),
                     ),
                     trailing: isOnline

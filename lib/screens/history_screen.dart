@@ -439,6 +439,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     _filterChip(ComplaintStatus.incompleteAssigned, 'Assigned'),
                     _filterChip(ComplaintStatus.ongoing, 'In Progress'),
                     _filterChip(ComplaintStatus.completed, 'Resolved'),
+                    _filterChip(ComplaintStatus.escalated, 'Escalated'),
                   ],
                 ),
               ),
@@ -615,11 +616,12 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         children: [
-          _filterChip(null, 'All Tickets'),
+                    _filterChip(null, 'All Tickets'),
           _filterChip(ComplaintStatus.incompleteUnassigned, 'Pending'),
           _filterChip(ComplaintStatus.incompleteAssigned, 'Assigned'),
           _filterChip(ComplaintStatus.ongoing, 'In Progress'),
           _filterChip(ComplaintStatus.completed, 'Resolved'),
+          _filterChip(ComplaintStatus.escalated, 'Escalated'),
         ],
       ),
     );
@@ -939,7 +941,7 @@ class _TicketRecordCard extends StatelessWidget {
 Widget _statusPill(ComplaintStatus status) {
   final color = Color(status.colorValue);
   return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
     decoration: BoxDecoration(
       color: color.withValues(alpha: 0.08),
       borderRadius: BorderRadius.circular(24),

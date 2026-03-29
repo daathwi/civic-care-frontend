@@ -5,6 +5,10 @@ part of 'complaint_detail_screen.dart';
 // ═══════════════════════════════════════════════════════════════════════════════
 
 extension _ComplaintDetailLocation on _ComplaintDetailScreenState {
+  Future<void> _openGrievanceInGoogleMaps(Complaint c) async {
+    await launchGoogleMapsDirections(c.latitude, c.longitude);
+  }
+
   Widget _buildLocationSection(Complaint c) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -68,6 +72,44 @@ extension _ComplaintDetailLocation on _ComplaintDetailScreenState {
                       ],
                     ),
                   ],
+                ),
+                Positioned(
+                  left: 12,
+                  bottom: 12,
+                  child: Material(
+                    color: Colors.white,
+                    elevation: 2,
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => _openGrievanceInGoogleMaps(c),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.navigation_rounded,
+                              size: 20,
+                              color: AppTheme.primary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Navigate',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
                 Positioned(
                   right: 12,

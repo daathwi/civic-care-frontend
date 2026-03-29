@@ -35,27 +35,29 @@ extension _ComplaintDetailWidgets on _ComplaintDetailScreenState {
           child: Icon(c.status.icon, color: statusColor, size: 20),
         ),
         const SizedBox(width: 14),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              c.status.label.toUpperCase(),
-              style: GoogleFonts.outfit(
-                fontSize: 12,
-                fontWeight: FontWeight.w900,
-                color: statusColor,
-                letterSpacing: 0.5,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                c.status.label.toUpperCase(),
+                style: GoogleFonts.outfit(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  color: statusColor,
+                  letterSpacing: 0.5,
+                ),
               ),
-            ),
-            Text(
-              'Updated ${DateFormat('MMM dd, yyyy').format(c.date)}',
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                color: AppTheme.textSecondary,
-                fontWeight: FontWeight.w500,
+              Text(
+                'Updated ${DateFormat('MMM dd, yyyy').format(c.date)}',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: AppTheme.textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
@@ -88,12 +90,16 @@ extension _ComplaintDetailWidgets on _ComplaintDetailScreenState {
         children: [
           Icon(icon, size: 14, color: AppTheme.primary),
           const SizedBox(width: 8),
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textPrimary,
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textPrimary,
+              ),
             ),
           ),
         ],

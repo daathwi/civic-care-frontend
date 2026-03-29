@@ -54,15 +54,12 @@ class WorkerAnalyticsScreen extends ConsumerWidget {
     final att = ref.watch(attendanceProvider);
 
     final mine = all.where((c) => c.assignedToId == user.id).toList();
+    final counts = statusCounts(mine);
     final resolved = mine
         .where((c) => c.status == ComplaintStatus.completed)
         .toList();
-    final active = mine
-        .where((c) => c.status == ComplaintStatus.ongoing)
-        .length;
-    final assigned = mine
-        .where((c) => c.status == ComplaintStatus.incompleteAssigned)
-        .length;
+    final active = counts.inProgress;
+    final assigned = counts.assigned;
 
     // Mock weekly data: each entry = tasks completed on that day
     final weekData = [2.0, 4.0, 3.0, 6.0, 5.0, resolved.length.toDouble(), 1.0];
@@ -70,7 +67,7 @@ class WorkerAnalyticsScreen extends ConsumerWidget {
 
     // Attendance today (capped from live state for demo)
     final todayHours = att.isClockedIn
-        ? att.dutyDuration.inMinutes / 60.0
+        ? att.dutyDurationHoursExact
         : 7.5; // placeholder when not clocked in
 
     final isWide = MediaQuery.of(context).size.width >= 900;

@@ -61,10 +61,19 @@ class _VoiceRecordingWidgetState extends State<VoiceRecordingWidget> {
     try {
       if (await _recorder.hasPermission()) {
         final dir = await getTemporaryDirectory();
+        // Use WAV for reliability — uncompressed PCM avoids codec/beep issues on emulators & some devices
         final path =
-            '${dir.path}/recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
+            '${dir.path}/recording_${DateTime.now().millisecondsSinceEpoch}.wav';
 
-        const config = RecordConfig();
+        const config = RecordConfig(
+          encoder: AudioEncoder.wav,
+          sampleRate: 16000,
+          numChannels: 1,
+          autoGain: false,
+          echoCancel: false,
+          noiseSuppress: false,
+          androidConfig: AndroidRecordConfig(useLegacy: true),
+        );
         await _recorder.start(config, path: path);
 
         setState(() {

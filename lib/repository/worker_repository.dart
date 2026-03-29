@@ -5,12 +5,13 @@ class WorkerRepository {
 
   final ApiClient _client;
 
-  /// GET /workers — optional department, ward_id, status, skip, limit
+  /// GET /workers — optional department, ward_id, status, sort_by, skip, limit
   Future<Map<String, dynamic>> list({
     String? accessToken,
     String? department,
     String? wardId,
     String? status,
+    String? sortBy,
     int skip = 0,
     int limit = 50,
   }) async {
@@ -18,6 +19,7 @@ class WorkerRepository {
     if (department != null) q['department'] = department;
     if (wardId != null) q['ward_id'] = wardId;
     if (status != null) q['status'] = status;
+    if (sortBy != null) q['sort_by'] = sortBy;
 
     final res = await _client.withToken(accessToken).get('/workers', queryParameters: q);
     if (!res.isOk) throw ApiException.fromResponse(res);

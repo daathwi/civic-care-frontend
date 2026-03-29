@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'core/api_config.dart';
@@ -6,26 +7,41 @@ import 'models/user_models.dart';
 import 'utils/responsive_utils.dart';
 import 'screens/api_url_screen.dart';
 import 'screens/dashboard_screen.dart';
-import 'screens/ward_feed_screen.dart';
+import 'screens/citizen_feed_screen.dart';
+import 'screens/department_performance_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/add_complaint_flow.dart';
 import 'screens/profile_screen.dart';
 import 'screens/login_screen.dart';
+import 'providers/attendance_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/complaint_provider.dart';
+import 'providers/message_provider.dart';
+import 'providers/connectivity_provider.dart';
+import 'providers/field_worker_provider.dart';
+import 'providers/offline_provider.dart';
+import 'services/offline_sync_service.dart';
 import 'screens/drawer/about_us_screen.dart';
 import 'screens/drawer/faq_screen.dart';
 import 'screens/drawer/contact_us_screen.dart';
 import 'screens/drawer/helpline_screen.dart';
+import 'screens/ward_environment_screen.dart';
 import 'screens/officer/field_manager_dashboard.dart';
 import 'screens/officer/manager_grievances_screen.dart';
 import 'screens/officer/manager_escalations_screen.dart';
 import 'screens/officer/worker_directory_screen.dart';
 import 'screens/officer/field_assistant_dashboard.dart';
 import 'screens/officer/field_assistant_tasks_screen.dart';
+import 'screens/officer/attendance_screen.dart';
+import 'screens/officer/worker_escalations_screen.dart';
+import 'screens/officer/manager_worker_analytics_screen.dart';
 import 'widgets/adaptive_scaffold.dart';
 import 'widgets/app_logo.dart';
+import 'widgets/civic_ui.dart';
 import 'core/app_theme.dart';
+import 'models/complaint.dart';
+import 'providers/worker_nav_provider.dart';
+import 'providers/portal_refresh.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -176,20 +192,43 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   int _currentIndex = 0;
   Widget? _overlayScreen;
   String? _overlayTitle;
+  bool _portalRefreshing = false;
+
+  Future<void> _runPortalRefresh(Future<void> Function(WidgetRef r) fn) async {
+    if (_portalRefreshing) return;
+    setState(() => _portalRefreshing = true);
+    try {
+      await fn(ref);
+      if (mounted) HapticFeedback.mediumImpact();
+    } finally {
+      if (mounted) setState(() => _portalRefreshing = false);
+    }
+  }
+
+  Future<void> _refreshCitizenPortal() =>
+      _runPortalRefresh(refreshCitizenPortal);
+
+  Future<void> _refreshManagerPortal() =>
+      _runPortalRefresh(refreshManagerPortal);
+
+  Future<void> _refreshWorkerPortal() =>
+      _runPortalRefresh(refreshWorkerPortal);
 
   static final _citizenScreens = [
     const DashboardScreen(),
-    const WardFeedScreen(),
+    const CitizenFeedScreen(),
     const HistoryScreen(),
+    const DepartmentPerformanceScreen(),
   ];
 
-  static const _citizenTitles = ['Overview', 'Community Feed', 'My Complaints'];
+  static const _citizenTitles = ['Overview', 'Feed', 'My Complaints', 'Insights'];
 
   static final _managerScreens = [
     const FieldManagerDashboard(),
     const ManagerGrievancesScreen(),
     const WorkerDirectoryScreen(),
     const ManagerEscalationsScreen(),
+    const ManagerWorkerAnalyticsScreen(),
   ];
 
   static const _managerTitles = [
@@ -197,15 +236,18 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     'Grievances',
     'Workforce',
     'Escalations',
+    'Analytics',
   ];
 
   // Worker screens are created lazily to avoid constant rebuilds
   static final _workerScreens = [
     const FieldAssistantDashboard(),
     const FieldAssistantTasksScreen(),
+    const AttendanceScreen(),
+    const WorkerEscalationsScreen(),
   ];
 
-  static const _workerTitles = ['Dashboard', 'My Tasks'];
+  static const _workerTitles = ['Dashboard', 'My Tasks', 'Attendance', 'Escalations'];
 
   @override
   Widget build(BuildContext context) {
@@ -218,18 +260,16 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       final prevWardId = prev?.user?.wardId;
       final nextWardId = next.user?.wardId;
 
-      // Reload if we just logged in OR if our ward_id finally resolved/changed.
+      // Reload grievances whenever we log in or ward_id resolves/changes.
       if (isAuth && (!wasAuth || prevWardId != nextWardId)) {
+        ref.read(complaintProvider.notifier).loadGrievances();
         final user = next.user;
         final isStaff =
             user?.role == UserRole.fieldManager ||
             user?.role == UserRole.fieldAssistant ||
             user?.role == UserRole.admin;
-
-        // SAFEGUARD: Only trigger global feed load if we have a ward_id for citizens.
-        // History provider and specific overrides handle their own logic.
-        if (isStaff || user?.wardId != null) {
-          ref.read(complaintProvider.notifier).loadGrievances();
+        if (isStaff) {
+          ref.read(fieldWorkerProvider.notifier).loadWorkers();
         }
       }
       if (wasAuth != isAuth) {
@@ -274,6 +314,48 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             _currentIndex = 0;
           });
         });
+      }
+    });
+
+    ref.listen(workerTabToSelectProvider, (prev, next) {
+      if (next != null && authState.user?.role == UserRole.fieldAssistant) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          setState(() => _currentIndex = next.clamp(0, 3));
+          ref.read(workerTabToSelectProvider.notifier).state = null;
+        });
+      }
+    });
+
+    ref.listen(connectivityProvider, (prev, next) {
+      final wasOffline = prev?.valueOrNull == false;
+      final isOnline = next.valueOrNull == true;
+      if (wasOffline && isOnline && authState.isAuthenticated) {
+        final token = ref.read(authProvider).accessToken;
+        final workerId = ref.read(authProvider).user?.id;
+        if (token != null && workerId != null) {
+          final sync = OfflineSyncService(
+            storage: ref.read(offlineStorageProvider),
+            accessToken: token,
+            workerId: workerId,
+            grievanceRepo: ref.read(grievanceRepositoryProvider),
+            attendanceRepo: ref.read(attendanceRepositoryProvider),
+            messageRepo: ref.read(messageRepositoryProvider),
+          );
+          sync.sync().then((_) {
+            ref.read(attendanceProvider.notifier).fetchStatus();
+            ref.invalidate(pendingSyncCountProvider);
+            final uid = ref.read(authProvider).user?.id;
+            if (uid != null) {
+              ref.read(complaintProvider.notifier).loadGrievances(workerId: uid, limit: 100);
+              ref.read(workerEscalationsProvider.notifier).loadGrievances(
+                workerId: uid,
+                status: ComplaintStatus.escalated,
+                limit: 100,
+              );
+            }
+          });
+        }
       }
     });
 
@@ -404,6 +486,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       title: _getTitle(_citizenTitles[_currentIndex]),
       userName: effectiveUser?.name ?? '',
       userRole: 'CITIZEN PORTAL',
+      onPortalRefresh: _refreshCitizenPortal,
+      isPortalRefreshing: _portalRefreshing,
       onProfileTap: isWeb
           ? () => _showOverlay('My Account', const ProfileScreen())
           : () => Navigator.push(
@@ -429,14 +513,19 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           selectedIcon: Icons.dashboard,
         ),
         AdaptiveDestination(
-          label: 'Community',
-          icon: Icons.people_outline,
-          selectedIcon: Icons.people,
+          label: 'Feed',
+          icon: Icons.feed_outlined,
+          selectedIcon: Icons.feed,
         ),
         AdaptiveDestination(
           label: 'History',
           icon: Icons.history_outlined,
           selectedIcon: Icons.history,
+        ),
+        AdaptiveDestination(
+          label: 'Insights',
+          icon: Icons.analytics_outlined,
+          selectedIcon: Icons.analytics_rounded,
         ),
       ],
       selectedIndex: _currentIndex,
@@ -445,7 +534,11 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         setState(() => _currentIndex = i);
       },
       body: _buildBody(normalBody),
-      mobileDrawer: _drawer(authState, isCitizenPortal: true),
+      mobileDrawer: _drawer(
+        authState,
+        isCitizenPortal: true,
+        onPortalRefreshAll: _refreshCitizenPortal,
+      ),
       // We remove the standard NavigationBar here because AdaptiveScaffold
       // now natively renders `_buildGlassFloatingBottomBar` using `destinations` and `selectedIndex`.
       // Ensure AdaptiveScaffold knows to use the floating bar on mobile:
@@ -489,9 +582,11 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     );
 
     return AdaptiveScaffold(
-      title: _getTitle(_managerTitles[_currentIndex]),
+      title: _getTitle(_managerTitles[safeIndex]),
       userName: authState.user?.name ?? '',
       userRole: 'MANAGER PORTAL',
+      onPortalRefresh: _refreshManagerPortal,
+      isPortalRefreshing: _portalRefreshing,
       onProfileTap: isWeb
           ? () => _showOverlay('My Account', const ProfileScreen())
           : () => Navigator.push(
@@ -528,6 +623,11 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           icon: Icons.warning_amber_rounded,
           selectedIcon: Icons.warning_amber,
         ),
+        AdaptiveDestination(
+          label: 'Analytics',
+          icon: Icons.analytics_outlined,
+          selectedIcon: Icons.analytics_rounded,
+        ),
       ],
       selectedIndex: _currentIndex,
       onDestinationSelected: (i) {
@@ -535,7 +635,11 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         setState(() => _currentIndex = i);
       },
       body: _buildBody(normalBody),
-      mobileDrawer: _drawer(authState, isCitizenPortal: false),
+      mobileDrawer: _drawer(
+        authState,
+        isCitizenPortal: false,
+        onPortalRefreshAll: _refreshManagerPortal,
+      ),
       mobileBottomNavigationBar:
           const SizedBox.shrink(), // Trigger floating glass bottom bar
     );
@@ -544,14 +648,25 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   Widget _buildWorkerShell(AuthState authState) {
     final isWeb =
         MediaQuery.of(context).size.width >= ResponsiveUtils.sidebarBreakpoint;
-    // Safety clamp to prevent index out of bounds during portal transitions
     final safeIndex = _currentIndex.clamp(0, _workerScreens.length - 1);
-    final normalBody = IndexedStack(index: safeIndex, children: _workerScreens);
+    final stack = IndexedStack(index: safeIndex, children: _workerScreens);
+    final isOffline = ref.watch(connectivityProvider).valueOrNull == false;
+    final normalBody = isOffline
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const OfflineBanner(),
+              Expanded(child: stack),
+            ],
+          )
+        : stack;
 
     return AdaptiveScaffold(
       title: _workerTitles[_currentIndex],
       userName: authState.user?.name ?? '',
       userRole: 'WORKER PORTAL',
+      onPortalRefresh: _refreshWorkerPortal,
+      isPortalRefreshing: _portalRefreshing,
       onProfileTap: isWeb
           ? () => _showOverlay('My Account', const ProfileScreen())
           : () => Navigator.push(
@@ -578,14 +693,29 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           icon: Icons.assignment_rounded,
           selectedIcon: Icons.assignment,
         ),
+        AdaptiveDestination(
+          label: 'Attendance',
+          icon: Icons.schedule_outlined,
+          selectedIcon: Icons.schedule_rounded,
+        ),
+        AdaptiveDestination(
+          label: 'Escalations',
+          icon: Icons.warning_amber_outlined,
+          selectedIcon: Icons.warning_amber_rounded,
+        ),
       ],
       selectedIndex: _currentIndex,
       onDestinationSelected: (i) {
         _clearOverlay();
+        ref.read(workerSelectedTabProvider.notifier).state = i;
         setState(() => _currentIndex = i);
       },
       body: _buildBody(normalBody),
-      mobileDrawer: _drawer(authState, isCitizenPortal: false),
+      mobileDrawer: _drawer(
+        authState,
+        isCitizenPortal: false,
+        onPortalRefreshAll: _refreshWorkerPortal,
+      ),
       mobileBottomNavigationBar:
           const SizedBox.shrink(), // Trigger floating glass bottom bar
     );
@@ -593,7 +723,11 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
   // ── Shared Drawer (mobile only) ───────────────────────────────────────────
 
-  Widget _drawer(AuthState authState, {bool isCitizenPortal = false}) {
+  Widget _drawer(
+    AuthState authState, {
+    bool isCitizenPortal = false,
+    Future<void> Function()? onPortalRefreshAll,
+  }) {
     final user = authState.user;
     final role = user?.role ?? UserRole.citizen;
     final isStaff = user?.isStaff ?? false;
@@ -610,14 +744,16 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       backgroundColor: Colors.transparent,
       elevation: 0,
       width: MediaQuery.of(context).size.width * 0.85,
-      child: AppTheme.glass(
-        blur: 40,
-        color: AppTheme.surfaceScaffold.withValues(alpha: 0.85),
-        child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
+      child: Builder(
+        builder: (drawerContext) {
+          return AppTheme.glass(
+            blur: 40,
+            color: AppTheme.surfaceScaffold.withValues(alpha: 0.85),
+            child: SafeArea(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
                 padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
                 child: Row(
                   children: [
@@ -675,17 +811,51 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                     const SizedBox(height: 8),
                     Container(
                       decoration: AppTheme.cardDecoration(),
-                      child: _drawerItem(
-                        icon: Icons.person_outline_rounded,
-                        title: 'My Profile',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const ProfileScreen(),
+                      child: Column(
+                        children: [
+                          if (onPortalRefreshAll != null) ...[
+                            _drawerItem(
+                              icon: Icons.sync_rounded,
+                              title: 'Refresh all data',
+                              onTap: () => onPortalRefreshAll(),
                             ),
-                          );
-                        },
+                            Divider(
+                              height: 1,
+                              indent: 56,
+                              color: AppTheme.border,
+                            ),
+                          ],
+                          _drawerItem(
+                            icon: Icons.person_outline_rounded,
+                            title: 'My Profile',
+                            onTap: () {
+                              Navigator.push(
+                                drawerContext,
+                                MaterialPageRoute(
+                                  builder: (_) => const ProfileScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                          Divider(
+                            height: 1,
+                            indent: 56,
+                            color: AppTheme.border,
+                          ),
+                          _drawerItem(
+                            icon: Icons.air_rounded,
+                            title: 'Ward Environment',
+                            onTap: () async {
+                              Scaffold.of(drawerContext).closeDrawer();
+                              await Navigator.push(
+                                drawerContext,
+                                MaterialPageRoute(
+                                  builder: (_) => const WardEnvironmentScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -707,7 +877,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                             icon: Icons.info_outline_rounded,
                             title: 'About Us',
                             onTap: () => Navigator.push(
-                              context,
+                              drawerContext,
                               MaterialPageRoute(
                                 builder: (_) => const AboutUsScreen(),
                               ),
@@ -722,7 +892,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                             icon: Icons.help_outline_rounded,
                             title: "FAQ's",
                             onTap: () => Navigator.push(
-                              context,
+                              drawerContext,
                               MaterialPageRoute(
                                 builder: (_) => const FAQScreen(),
                               ),
@@ -737,7 +907,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                             icon: Icons.contact_support_outlined,
                             title: 'Contact Us',
                             onTap: () => Navigator.push(
-                              context,
+                              drawerContext,
                               MaterialPageRoute(
                                 builder: (_) => const ContactUsScreen(),
                               ),
@@ -752,7 +922,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                             icon: Icons.phone_forwarded_rounded,
                             title: 'MCD Helpline',
                             onTap: () => Navigator.push(
-                              context,
+                              drawerContext,
                               MaterialPageRoute(
                                 builder: (_) => const HelplineScreen(),
                               ),
@@ -826,8 +996,10 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             ],
           ),
         ),
-      ),
     );
+  },
+  ),
+);
   }
 
   Widget _drawerItem({

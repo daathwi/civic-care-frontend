@@ -9,6 +9,7 @@ import '../repository/grievance_mappers.dart';
 import '../repository/grievance_repository.dart';
 import 'auth_provider.dart';
 import 'departments_provider.dart';
+import 'offline_provider.dart';
 
 final grievanceRepositoryProvider = Provider<GrievanceRepository>(
   (ref) => GrievanceRepository(),
@@ -120,6 +121,28 @@ class ComplaintNotifier extends Notifier<GrievanceState> {
       filterStatus: status, // Persist for loadMore
     );
     try {
+      final isOnline = ref.read(isOnlineProvider);
+      if (!isOnline && workerId != null && workerId.isNotEmpty) {
+        final storage = ref.read(offlineStorageProvider);
+        final cached = await storage.readWorkerTasksCache(
+          workerId: workerId,
+          status: status != null ? _statusToApi(status) : null,
+        );
+        if (cached != null) {
+          final deptIdToName = await _deptIdToName();
+          final items = cached['items'] is List ? cached['items'] as List : <dynamic>[];
+          final total = cached['total'] is int ? cached['total'] as int : items.length;
+          final list = <Complaint>[];
+          for (final e in items) {
+            try {
+              final map = e is Map<String, dynamic> ? e : Map<String, dynamic>.from(e as Map);
+              list.add(complaintFromApi(map, deptIdToName: deptIdToName));
+            } catch (_) {}
+          }
+          state = state.copyWith(complaints: list, isLoading: false, total: total);
+          return;
+        }
+      }
       final deptIdToName = await _deptIdToName();
       final res = await _listPage(
         skip: 0,
@@ -141,6 +164,13 @@ class ComplaintNotifier extends Notifier<GrievanceState> {
         } catch (_) {}
       }
       state = state.copyWith(complaints: list, isLoading: false, total: total);
+      if (workerId != null && workerId.isNotEmpty) {
+        ref.read(offlineStorageProvider).cacheWorkerTasks(
+          workerId: workerId,
+          status: status != null ? _statusToApi(status) : null,
+          apiResponse: res,
+        );
+      }
     } on ApiException catch (e) {
       state = state.copyWith(isLoading: false, error: e.userMessage);
     } catch (e) {
@@ -340,11 +370,30 @@ class ComplaintNotifier extends Notifier<GrievanceState> {
   Future<String?> addComment(String complaintId, String text) async {
     final token = _token;
     if (token == null || text.trim().isEmpty) return 'Not logged in';
+    final trimmed = text.trim();
+    final isOnline = ref.read(isOnlineProvider);
+    if (!isOnline) {
+      await ref.read(offlineStorageProvider).addToSyncQueue({
+        'type': 'add_comment',
+        'complaint_id': complaintId,
+        'text': trimmed,
+      });
+      final user = ref.read(authProvider).user;
+      final comment = Comment(
+        id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
+        userId: user?.id ?? '',
+        userName: user?.name ?? 'You',
+        text: trimmed,
+        timestamp: DateTime.now(),
+      );
+      addCommentLocal(complaintId, comment);
+      return null;
+    }
     try {
       final res = await _repo.addComment(
         complaintId,
         accessToken: token,
-        text: text.trim(),
+        text: trimmed,
       );
       final comment = Comment(
         id: res['id'] as String,
@@ -410,6 +459,33 @@ class ComplaintNotifier extends Notifier<GrievanceState> {
   }) async {
     final token = _token;
     if (token == null) return 'Not logged in';
+    final isOnline = ref.read(isOnlineProvider);
+    if (!isOnline) {
+      await ref.read(offlineStorageProvider).addToSyncQueue({
+        'type': 'update_status',
+        'complaint_id': complaintId,
+        'status': _statusToApi(newStatus),
+        'note': note.isEmpty ? null : note,
+        'resolution_image_path': resolutionImagePath,
+      });
+      final workerId = ref.read(authProvider).user?.id;
+      if (workerId != null) {
+        await ref.read(offlineStorageProvider).updateCachedComplaintStatus(
+          workerId: workerId,
+          complaintId: complaintId,
+          newStatus: _statusToApi(newStatus),
+        );
+      }
+      final idx = state.complaints.indexWhere((c) => c.id == complaintId);
+      if (idx >= 0) {
+        final updated = state.complaints[idx].copyWith(
+          status: newStatus,
+          resolutionImagePath: resolutionImagePath ?? state.complaints[idx].resolutionImagePath,
+        );
+        _replaceById(updated);
+      }
+      return null;
+    }
     try {
       String? resolutionUrl;
       if (resolutionImagePath != null && resolutionImagePath.isNotEmpty) {
@@ -445,6 +521,14 @@ class ComplaintNotifier extends Notifier<GrievanceState> {
       final deptIdToName = await _deptIdToName();
       _replaceById(complaintFromApi(detail, deptIdToName: deptIdToName));
     } catch (_) {}
+  }
+
+  /// Ensures a complaint is in the list so addCommentLocal can find it.
+  /// Call when opening task detail from a screen that may use a different provider.
+  void ensureComplaintInList(Complaint c) {
+    final list = state.complaints;
+    if (list.any((x) => x.id == c.id)) return;
+    state = state.copyWith(complaints: [...list, c]);
   }
 
   void addCommentLocal(String grievanceId, Comment comment) {
@@ -503,6 +587,19 @@ final userHistoryProvider = NotifierProvider<ComplaintNotifier, GrievanceState>(
 
 /// Separate provider for Manager portal list to prevent clobbering Dashboard KPIs.
 final managerGrievancesProvider =
+    NotifierProvider<ComplaintNotifier, GrievanceState>(
+      ComplaintNotifier.new,
+    );
+
+/// Citizen portal: escalated grievances (status=escalated) so Feed tab keeps its own data.
+final citizenEscalationsProvider =
+    NotifierProvider<ComplaintNotifier, GrievanceState>(
+      ComplaintNotifier.new,
+    );
+
+/// Worker portal: escalated tasks assigned to me. Isolated from complaintProvider
+/// so Escalations tab does not show stale "my tasks" data from Dashboard.
+final workerEscalationsProvider =
     NotifierProvider<ComplaintNotifier, GrievanceState>(
       ComplaintNotifier.new,
     );

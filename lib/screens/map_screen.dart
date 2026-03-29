@@ -11,10 +11,27 @@ import 'complaint_detail/complaint_detail_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/ward_provider.dart';
 
+/// How many grievances to request when opening the map (aligned with portal filters).
+const int kMapGrievanceFetchLimit = 500;
+
 class MapScreen extends ConsumerStatefulWidget {
   final List<Complaint>? initialComplaints;
   final LatLng? initialCenter;
-  const MapScreen({super.key, this.initialComplaints, this.initialCenter});
+
+  /// When set, map markers use this notifier's list (e.g. [managerGrievancesProvider] with status filters).
+  /// Defaults to [complaintProvider] (citizen ward feed, worker tasks, manager dashboard list).
+  final NotifierProvider<ComplaintNotifier, GrievanceState>? grievanceSourceProvider;
+
+  /// Optional portal search (e.g. manager grievances search) — applied client-side on top of API data.
+  final String? searchQuery;
+
+  const MapScreen({
+    super.key,
+    this.initialComplaints,
+    this.initialCenter,
+    this.grievanceSourceProvider,
+    this.searchQuery,
+  });
 
   @override
   ConsumerState<MapScreen> createState() => _MapScreenState();
@@ -33,17 +50,44 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Fetch a larger batch of grievances for the ward map (hyper-locality).
-      ref.read(complaintProvider.notifier).loadGrievances(limit: 100);
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrapMapData());
+  }
+
+  /// Load grievances using the same filters as the active portal list (status, worker, reporter).
+  void _bootstrapMapData() {
+    if (widget.initialComplaints != null) return;
+    final p = widget.grievanceSourceProvider ?? complaintProvider;
+    final st = ref.read(p);
+    ref.read(p.notifier).loadGrievances(
+          limit: kMapGrievanceFetchLimit,
+          status: st.filterStatus,
+          workerId: st.filterWorkerId,
+          reporterId: st.filterReporterId,
+        );
+  }
+
+  List<Complaint> _filteredComplaints() {
+    if (widget.initialComplaints != null) return widget.initialComplaints!;
+    final p = widget.grievanceSourceProvider ?? complaintProvider;
+    var list = ref.watch(p).complaints;
+    final q = widget.searchQuery?.trim();
+    if (q != null && q.isNotEmpty) {
+      final lq = q.toLowerCase();
+      list = list
+          .where(
+            (c) =>
+                c.title.toLowerCase().contains(lq) ||
+                c.description.toLowerCase().contains(lq) ||
+                c.userName.toLowerCase().contains(lq),
+          )
+          .toList();
+    }
+    return list;
   }
 
   @override
   Widget build(BuildContext context) {
-    // For non-admin, complaintListProvider is already ward-scoped (hyper-locality).
-    final allComplaints = ref.watch(complaintListProvider);
-    final complaints = widget.initialComplaints ?? allComplaints;
+    final complaints = _filteredComplaints();
     final isDesktop = ResponsiveUtils.isDesktop(context);
     final isTablet = ResponsiveUtils.isTablet(context);
 

@@ -5,13 +5,15 @@ import 'package:geolocator/geolocator.dart';
 import '../core/api_client.dart';
 import '../repository/attendance_repository.dart';
 import 'auth_provider.dart';
+import 'offline_provider.dart';
 
 final attendanceRepositoryProvider = Provider<AttendanceRepository>(
   (ref) => AttendanceRepository(),
 );
 
 // ────────────────────────────────────────────────────────────────────────────
-// State
+// State — Backend is the ONLY source of truth. UI state derived ONLY from API.
+// No local persistence. No optimistic updates.
 // ────────────────────────────────────────────────────────────────────────────
 
 class AttendanceState {
@@ -35,15 +37,33 @@ class AttendanceState {
 
   Duration get dutyDuration {
     if (!isClockedIn || clockInTime == null) return Duration.zero;
-    return DateTime.now().difference(clockInTime!);
+    final diff = DateTime.now().difference(clockInTime!);
+    // Clock skew / timezone quirks can make this negative; never show negative shift.
+    if (diff.isNegative) return Duration.zero;
+    return diff;
   }
 
   String get dutyDurationFormatted {
     final d = dutyDuration;
-    final h = d.inHours.toString().padLeft(2, '0');
-    final m = (d.inMinutes % 60).toString().padLeft(2, '0');
-    final s = (d.inSeconds % 60).toString().padLeft(2, '0');
+    final total = d.inSeconds;
+    final h = (total ~/ 3600).toString().padLeft(2, '0');
+    final m = ((total % 3600) ~/ 60).toString().padLeft(2, '0');
+    final s = (total % 60).toString().padLeft(2, '0');
     return '$h:$m:$s';
+  }
+
+  /// For KPI cards — avoid `inMinutes / 60` (truncates to whole minutes → confusing 0.0 right after clock-in).
+  double get dutyDurationHoursExact =>
+      dutyDuration.inSeconds / 3600.0;
+
+  /// Short label for shift summary, e.g. `45s`, `12m`, `1h 05m`.
+  String get dutyDurationShortLabel {
+    final sec = dutyDuration.inSeconds;
+    if (sec < 60) return '${sec}s';
+    final h = sec ~/ 3600;
+    final m = (sec % 3600) ~/ 60;
+    if (h > 0) return '${h}h ${m.toString().padLeft(2, '0')}m';
+    return '${m}m';
   }
 
   AttendanceState copyWith({
@@ -69,7 +89,7 @@ class AttendanceState {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Notifier
+// Notifier — State changes ONLY from backend API responses. Non-negotiable.
 // ────────────────────────────────────────────────────────────────────────────
 
 class AttendanceNotifier extends Notifier<AttendanceState> {
@@ -85,34 +105,69 @@ class AttendanceNotifier extends Notifier<AttendanceState> {
     return const AttendanceState();
   }
 
-  // ── Public actions ──────────────────────────────────────────────────────
+  void clearError() {
+    state = state.copyWith(clearError: true);
+  }
 
-  /// Sync with backend (e.g. on dashboard load) so UI shows Clock in vs Clock out correctly.
+  /// Fetch status from backend. When offline, check local storage for pending clock-in.
   Future<void> fetchStatus() async {
     final token = ref.read(authProvider).accessToken;
     if (token == null || token.isEmpty) return;
+    final isOnline = ref.read(isOnlineProvider);
+    if (!isOnline) {
+      final storage = ref.read(offlineStorageProvider);
+      final local = await storage.getLocalClockIn();
+      if (local != null) {
+        final clockInStr = local['clock_in_time'] as String?;
+        final clockInTime = clockInStr != null ? DateTime.tryParse(clockInStr) : null;
+        final lat = (local['lat'] as num?)?.toDouble();
+        final lng = (local['lng'] as num?)?.toDouble();
+        Position? pos;
+        if (lat != null && lng != null) {
+          pos = Position(
+            latitude: lat,
+            longitude: lng,
+            timestamp: DateTime.now(),
+            accuracy: 0,
+            altitude: 0,
+            altitudeAccuracy: 0,
+            heading: 0,
+            headingAccuracy: 0,
+            speed: 0,
+            speedAccuracy: 0,
+          );
+        }
+        state = state.copyWith(
+          isClockedIn: true,
+          clockInTime: clockInTime ?? DateTime.now(),
+          clockInLocation: pos,
+          currentLocation: pos,
+        );
+        _startTracking();
+      }
+      return;
+    }
     try {
       final data = await ref.read(attendanceRepositoryProvider).status(token);
       final isClockedIn = data['is_clocked_in'] as bool? ?? false;
       final record = data['current_record'] as Map<String, dynamic>?;
+
       if (!isClockedIn || record == null) {
         state = state.copyWith(
           isClockedIn: false,
           clockInTime: null,
           clockInLocation: null,
         );
+        _positionSub?.cancel();
+        _ticker?.cancel();
         return;
       }
+
       final clockInStr = record['clock_in_time'] as String?;
-      final clockInTime = clockInStr != null
-          ? DateTime.tryParse(clockInStr)
-          : null;
-      final lat = (record['clock_in_lat'] is num)
-          ? (record['clock_in_lat'] as num).toDouble()
-          : null;
-      final lng = (record['clock_in_lng'] is num)
-          ? (record['clock_in_lng'] as num).toDouble()
-          : null;
+      final clockInTime = clockInStr != null ? DateTime.tryParse(clockInStr) : null;
+      final lat = (record['clock_in_lat'] is num) ? (record['clock_in_lat'] as num).toDouble() : null;
+      final lng = (record['clock_in_lng'] is num) ? (record['clock_in_lng'] as num).toDouble() : null;
+
       Position? pos;
       if (lat != null && lng != null) {
         pos = Position(
@@ -128,6 +183,7 @@ class AttendanceNotifier extends Notifier<AttendanceState> {
           speedAccuracy: 0,
         );
       }
+
       state = state.copyWith(
         isClockedIn: true,
         clockInTime: clockInTime ?? DateTime.now(),
@@ -138,42 +194,49 @@ class AttendanceNotifier extends Notifier<AttendanceState> {
     } catch (_) {}
   }
 
-  void clearError() {
-    state = state.copyWith(clearError: true);
-  }
-
-  Future<void> fetchHistory() async {
+  Future<void> fetchHistory({DateTime? fromDate, DateTime? toDate}) async {
     final token = ref.read(authProvider).accessToken;
     if (token == null || token.isEmpty) return;
     try {
-      final data = await ref.read(attendanceRepositoryProvider).history(token);
+      final data = await ref.read(attendanceRepositoryProvider).history(
+            token,
+            fromDate: fromDate,
+            toDate: toDate,
+          );
       state = state.copyWith(history: data);
     } catch (_) {}
   }
 
+  /// Clock in. When offline, store locally and show optimistic state.
   Future<void> clockIn() async {
     state = state.copyWith(isLoading: true, clearError: true);
+    final token = ref.read(authProvider).accessToken;
+    if (token == null || token.isEmpty) {
+      state = state.copyWith(isLoading: false, error: 'Not authenticated');
+      return;
+    }
+    final isOnline = ref.read(isOnlineProvider);
     try {
       final pos = await _getPosition();
-      final token = ref.read(authProvider).accessToken;
-      if (token == null || token.isEmpty) {
-        state = state.copyWith(isLoading: false, error: 'Not authenticated');
+      if (!isOnline) {
+        await ref.read(offlineStorageProvider).setLocalClockIn(
+          clockInTime: DateTime.now().toUtc().toIso8601String(),
+          lat: pos.latitude,
+          lng: pos.longitude,
+        );
+        _applyClockInFromBackend({
+          'clock_in_time': DateTime.now().toUtc().toIso8601String(),
+        }, pos);
+        _startTracking();
+        state = state.copyWith(isLoading: false);
         return;
       }
-      final data = await ref
-          .read(attendanceRepositoryProvider)
-          .clockIn(accessToken: token, lat: pos.latitude, lng: pos.longitude);
-      final clockInStr = data['clock_in_time'] as String?;
-      final backendTime = clockInStr != null
-          ? DateTime.tryParse(clockInStr)
-          : null;
-      state = state.copyWith(
-        isClockedIn: true,
-        clockInTime: backendTime ?? DateTime.now(),
-        clockInLocation: pos,
-        currentLocation: pos,
-        isLoading: false,
-      );
+      final data = await ref.read(attendanceRepositoryProvider).clockIn(
+            accessToken: token,
+            lat: pos.latitude,
+            lng: pos.longitude,
+          );
+      _applyClockInFromBackend(data, pos);
       _startTracking();
     } on ApiException catch (e) {
       state = state.copyWith(isLoading: false);
@@ -181,114 +244,125 @@ class AttendanceNotifier extends Notifier<AttendanceState> {
         state = state.copyWith(error: 'Already clocked in today');
         await fetchStatus();
       } else {
-        state = state.copyWith(error: e.message);
+        state = state.copyWith(error: e.userMessage);
       }
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
+  /// Clock out. When offline, add to sync queue and clear local state.
   Future<void> clockOut() async {
     state = state.copyWith(isLoading: true, clearError: true);
     final token = ref.read(authProvider).accessToken;
-    if (token == null || state.clockInLocation == null) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Cannot clock out: missing data',
-      );
+    if (token == null || token.isEmpty) {
+      state = state.copyWith(isLoading: false, error: 'Not authenticated');
       return;
     }
+    final isOnline = ref.read(isOnlineProvider);
     try {
-      await ref
-          .read(attendanceRepositoryProvider)
-          .clockOut(
-            accessToken: token,
-            lat:
-                state.currentLocation?.latitude ??
-                state.clockInLocation!.latitude,
-            lng:
-                state.currentLocation?.longitude ??
-                state.clockInLocation!.longitude,
-          );
-      _positionSub?.cancel();
-      _ticker?.cancel();
-      state = const AttendanceState();
-    } on ApiException catch (e) {
-      state = state.copyWith(isLoading: false, error: e.message);
+      final pos = await _getPosition();
+      if (!isOnline) {
+        await ref.read(offlineStorageProvider).addToSyncQueue({
+          'type': 'clock_out',
+          'lat': pos.latitude,
+          'lng': pos.longitude,
+        });
+        await ref.read(offlineStorageProvider).clearLocalClockIn();
+        _positionSub?.cancel();
+        _ticker?.cancel();
+        state = const AttendanceState();
+        return;
+      }
+      await _doClockOut(token, pos);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
-  // ── Proximity utilities ─────────────────────────────────────────────────
+  Future<void> _doClockOut(String token, Position pos) async {
+    const maxAttempts = 2;
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await ref.read(attendanceRepositoryProvider).clockOut(
+              accessToken: token,
+              lat: pos.latitude,
+              lng: pos.longitude,
+            );
+        // Success: backend confirmed. Clear state.
+        _positionSub?.cancel();
+        _ticker?.cancel();
+        state = const AttendanceState();
+        return;
+      } on ApiException catch (e) {
+        if (e.statusCode == 404 && attempt < maxAttempts) {
+          // Brief delay then retry (handles eventual consistency)
+          await Future<void>.delayed(const Duration(milliseconds: 800));
+          continue;
+        }
+        state = state.copyWith(isLoading: false);
+        if (e.statusCode == 404) {
+          state = state.copyWith(error: 'No active clock-in found');
+          await fetchStatus();
+        } else {
+          state = state.copyWith(error: e.userMessage);
+        }
+        return;
+      }
+    }
+  }
 
-  /// Returns distance in meters between the worker's current position and
-  /// the given coordinates. Returns [double.infinity] if location is unknown.
+  void _applyClockInFromBackend(Map<String, dynamic> data, Position pos) {
+    final clockInStr = data['clock_in_time'] as String?;
+    final clockInTime = clockInStr != null ? DateTime.tryParse(clockInStr) : null;
+    state = state.copyWith(
+      isClockedIn: true,
+      clockInTime: clockInTime ?? DateTime.now(),
+      clockInLocation: pos,
+      currentLocation: pos,
+      isLoading: false,
+    );
+  }
+
   double distanceTo(double lat, double lng) {
     final loc = state.currentLocation;
     if (loc == null) return double.infinity;
     return Geolocator.distanceBetween(loc.latitude, loc.longitude, lat, lng);
   }
 
-  /// Returns true if the worker is within [threshold] meters of the site.
   bool isAtSite(double lat, double lng, {double threshold = 10.0}) {
     return distanceTo(lat, lng) <= threshold;
   }
 
-  // ── Private helpers ─────────────────────────────────────────────────────
-
   Future<Position> _getPosition() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      throw 'Location services are disabled. Please enable GPS.';
-    }
-
-    LocationPermission permission = await Geolocator.checkPermission();
+    final enabled = await Geolocator.isLocationServiceEnabled();
+    if (!enabled) throw 'Location services are disabled. Please enable GPS.';
+    var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        throw 'Location permission denied.';
-      }
+      if (permission == LocationPermission.denied) throw 'Location permission denied.';
     }
     if (permission == LocationPermission.deniedForever) {
       throw 'Location permissions are permanently denied.';
     }
-
     return Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.bestForNavigation,
-      ),
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.bestForNavigation),
     );
   }
 
   void _startTracking() {
     _positionSub?.cancel();
-    _positionSub =
-        Geolocator.getPositionStream(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high,
-            distanceFilter: 3, // update every 3 meters moved
-          ),
-        ).listen((pos) {
-          state = state.copyWith(currentLocation: pos);
-        });
-
-    // Drive the duty-duration timer every second
+    _positionSub = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 3),
+    ).listen((pos) {
+      state = state.copyWith(currentLocation: pos);
+    });
     _ticker?.cancel();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (state.isClockedIn) {
-        // Trigger a rebuild by emitting a tiny state update
-        state = state.copyWith();
-      }
+      if (state.isClockedIn) state = state.copyWith();
     });
   }
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// Provider
-// ────────────────────────────────────────────────────────────────────────────
-
 final attendanceProvider =
-    NotifierProvider<AttendanceNotifier, AttendanceState>(
-      AttendanceNotifier.new,
-    );
+    NotifierProvider<AttendanceNotifier, AttendanceState>(AttendanceNotifier.new);

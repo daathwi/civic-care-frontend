@@ -37,11 +37,39 @@ class AttendanceRepository {
     return res.json as Map<String, dynamic>? ?? {};
   }
 
-  /// GET /attendance/history
-  Future<List<dynamic>> history(String accessToken) async {
-    final res = await _client.withToken(accessToken).get('/attendance/history');
+  /// GET /attendance/history?from_date=&to_date=
+  Future<List<dynamic>> history(
+    String accessToken, {
+    DateTime? fromDate,
+    DateTime? toDate,
+  }) async {
+    final params = <String, String>{};
+    if (fromDate != null) params['from_date'] = _dateStr(fromDate);
+    if (toDate != null) params['to_date'] = _dateStr(toDate);
+    final q = params.isEmpty ? '' : '?${params.entries.map((e) => '${e.key}=${e.value}').join('&')}';
+    final res = await _client.withToken(accessToken).get('/attendance/history$q');
     if (!res.isOk) throw ApiException.fromResponse(res);
     final data = res.json;
     return data is List ? data : [];
   }
+
+  /// GET /attendance/worker/{workerId} (Manager)
+  Future<List<dynamic>> workerHistory(
+    String accessToken,
+    String workerId, {
+    DateTime? fromDate,
+    DateTime? toDate,
+  }) async {
+    final params = <String, String>{};
+    if (fromDate != null) params['from_date'] = _dateStr(fromDate);
+    if (toDate != null) params['to_date'] = _dateStr(toDate);
+    final q = params.isEmpty ? '' : '?${params.entries.map((e) => '${e.key}=${e.value}').join('&')}';
+    final res = await _client.withToken(accessToken).get('/attendance/worker/$workerId$q');
+    if (!res.isOk) throw ApiException.fromResponse(res);
+    final data = res.json;
+    return data is List ? data : [];
+  }
+
+  static String _dateStr(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 }

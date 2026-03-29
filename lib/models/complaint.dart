@@ -89,6 +89,28 @@ extension ComplaintCategoryExt on ComplaintCategory {
   }
 }
 
+/// Shared status counts for KPI boxes and filters. Use everywhere for consistency.
+int countByStatus(List<Complaint> complaints, ComplaintStatus status) {
+  return complaints.where((c) => c.status == status).length;
+}
+
+/// Counts for dashboard KPI boxes. Matches filter chip definitions.
+({int pending, int assigned, int inProgress, int resolved, int escalated})
+    statusCounts(List<Complaint> complaints) {
+  final pending = countByStatus(complaints, ComplaintStatus.incompleteUnassigned);
+  final assigned = countByStatus(complaints, ComplaintStatus.incompleteAssigned);
+  final inProgress = countByStatus(complaints, ComplaintStatus.ongoing);
+  final resolved = countByStatus(complaints, ComplaintStatus.completed);
+  final escalated = countByStatus(complaints, ComplaintStatus.escalated);
+  return (
+    pending: pending,
+    assigned: assigned,
+    inProgress: inProgress,
+    resolved: resolved,
+    escalated: escalated,
+  );
+}
+
 extension ComplaintStatusExt on ComplaintStatus {
   String get label {
     switch (this) {
@@ -99,9 +121,9 @@ extension ComplaintStatusExt on ComplaintStatus {
       case ComplaintStatus.incompleteUnassigned:
         return 'Pending';
       case ComplaintStatus.ongoing:
-        return 'IN PROGRESS';
+        return 'In Progress';
       case ComplaintStatus.escalated:
-        return 'ESCALATED';
+        return 'Escalated';
     }
   }
 
@@ -194,6 +216,9 @@ class Complaint {
   final String? reporterPhone;
   final int? citizenRating;
   final int reopenCount;
+  final String? aiSuggestedWorkerId;
+  final String? aiSuggestedWorkerName;
+  final String? aiSuggestionReason;
 
   /// Department name resolved from API (category_dept_id). Shown as first tag when set.
   final String? departmentDisplayName;
@@ -231,6 +256,9 @@ class Complaint {
     this.citizenRating,
     this.reopenCount = 0,
     this.departmentDisplayName,
+    this.aiSuggestedWorkerId,
+    this.aiSuggestedWorkerName,
+    this.aiSuggestionReason,
   }) : events = events ?? const [],
        comments = comments ?? const [];
 
@@ -267,6 +295,9 @@ class Complaint {
     int? citizenRating,
     int? reopenCount,
     String? departmentDisplayName,
+    String? aiSuggestedWorkerId,
+    String? aiSuggestedWorkerName,
+    String? aiSuggestionReason,
   }) {
     return Complaint(
       id: id ?? this.id,
@@ -302,6 +333,9 @@ class Complaint {
       reopenCount: reopenCount ?? this.reopenCount,
       departmentDisplayName:
           departmentDisplayName ?? this.departmentDisplayName,
+      aiSuggestedWorkerId: aiSuggestedWorkerId ?? this.aiSuggestedWorkerId,
+      aiSuggestedWorkerName: aiSuggestedWorkerName ?? this.aiSuggestedWorkerName,
+      aiSuggestionReason: aiSuggestionReason ?? this.aiSuggestionReason,
     );
   }
 }

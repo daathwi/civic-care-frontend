@@ -56,6 +56,10 @@ class AdaptiveScaffold extends StatelessWidget {
   final VoidCallback? onReportIssue;
   final bool useMobileAppBar;
 
+  /// Reloads all data for the current portal (tabs, analytics, lists). Shown in app bar / overlay.
+  final Future<void> Function()? onPortalRefresh;
+  final bool isPortalRefreshing;
+
   const AdaptiveScaffold({
     super.key,
     required this.title,
@@ -74,6 +78,8 @@ class AdaptiveScaffold extends StatelessWidget {
     this.onLogout,
     this.onReportIssue,
     this.useMobileAppBar = true,
+    this.onPortalRefresh,
+    this.isPortalRefreshing = false,
   });
 
   // Use AppTheme for CivicConnect parity (sidebar, nav, buttons)
@@ -111,6 +117,9 @@ class AdaptiveScaffold extends StatelessWidget {
                   fontSize: 18,
                 ),
               ),
+              actions: [
+                if (onPortalRefresh != null) _buildPortalRefreshButton(),
+              ],
             )
           : null,
       drawer: mobileDrawer,
@@ -120,6 +129,25 @@ class AdaptiveScaffold extends StatelessWidget {
         child: Stack(
           children: [
             body,
+            if (onPortalRefresh != null && !useMobileAppBar)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 4, right: 8),
+                    child: Material(
+                      elevation: 3,
+                      shadowColor: Colors.black26,
+                      shape: const CircleBorder(),
+                      color: Colors.white.withValues(alpha: 0.92),
+                      clipBehavior: Clip.antiAlias,
+                      child: _buildPortalRefreshButton(size: 44),
+                    ),
+                  ),
+                ),
+              ),
             Positioned(
               left: 12,
               right: 12,
@@ -131,6 +159,31 @@ class AdaptiveScaffold extends StatelessWidget {
       ),
       floatingActionButton: floatingActionButton,
       floatingActionButtonLocation: floatingActionButtonLocation,
+    );
+  }
+
+  Widget _buildPortalRefreshButton({double size = 48}) {
+    final busy = isPortalRefreshing;
+    return IconButton(
+      tooltip: 'Refresh all data',
+      onPressed: busy || onPortalRefresh == null
+          ? null
+          : () async {
+              await onPortalRefresh!();
+            },
+      icon: busy
+          ? SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppTheme.primary,
+              ),
+            )
+          : Icon(Icons.refresh_rounded, color: AppTheme.primary, size: 22),
+      iconSize: 22,
+      constraints: BoxConstraints(minWidth: size, minHeight: size),
+      padding: EdgeInsets.zero,
     );
   }
 
@@ -543,6 +596,11 @@ class AdaptiveScaffold extends StatelessWidget {
               ),
             ),
             const Spacer(),
+
+            if (onPortalRefresh != null) ...[
+              _buildPortalRefreshButton(),
+              const SizedBox(width: 8),
+            ],
 
             if (onReportIssue != null) ...[
               ElevatedButton.icon(

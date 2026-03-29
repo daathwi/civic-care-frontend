@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../../../utils/launch_links.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -57,6 +57,8 @@ class _FieldAssistantTaskDetailState
   bool _isUpdating = false;
   XFile? _resolutionPhoto;
   int _selectedTab = 0; // 0 = Updates, 1 = Comments
+  /// When true, Start Work / Capture & Resolve require GPS within radius (separate from shift).
+  bool _requireLocationAtGrievance = false;
 
   // Wrapper for setState — needed because extensions can't call setState directly
   // ignore: unused_element
@@ -68,6 +70,8 @@ class _FieldAssistantTaskDetailState
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Ensure complaint is in complaintProvider so offline comments show optimistically
+      ref.read(complaintProvider.notifier).ensureComplaintInList(widget.complaint);
       ref
           .read(complaintProvider.notifier)
           .refreshGrievanceDetail(widget.complaint.id);
@@ -75,16 +79,27 @@ class _FieldAssistantTaskDetailState
     });
   }
 
+  bool _isDisposed = false;
+  
+  @override
+  void dispose() {
+    _isDisposed = true;
+    _commentController.dispose();
+    _commentScrollController.dispose();
+    _wsChannel?.sink.close();
+    super.dispose();
+  }
+
   // ── WebSocket ─────────────────────────────────────────────────────────────
 
   void _connectWebSocket() {
-    final baseWsUrl = apiBaseUrl
-        .replaceFirst('http://', 'ws://')
-        .replaceFirst('https://', 'wss://');
-    final wsUrl = Uri.parse(
-      '$baseWsUrl$apiPrefix/ws/grievances/${widget.complaint.id}/comments',
+    final uri = Uri.parse(apiBaseUrl);
+    final wsScheme = uri.scheme == 'https' ? 'wss' : 'ws';
+    final wsUrl = uri.replace(
+      scheme: wsScheme,
+      path: '$apiPrefix/chat/ws/grievances/${widget.complaint.id}/comments',
     );
-
+    debugPrint('DEBUG: Connecting to Comments WebSocket: $wsUrl');
     try {
       _wsChannel = WebSocketChannel.connect(wsUrl);
 
@@ -112,15 +127,32 @@ class _FieldAssistantTaskDetailState
                   .read(complaintProvider.notifier)
                   .addCommentLocal(widget.complaint.id, newComment);
               _scrollToBottom();
-            } else if (msg['type'] == 'auth_error' || msg['type'] == 'error') {
-              if (mounted) _warn(msg['message'] ?? 'Chat connection error');
             }
-          } catch (_) {}
+          } catch (e) {
+            debugPrint('DEBUG: Error parsing WS message: $e');
+          }
         },
-        onDone: () => _wsChannel = null,
-        onError: (_) => _wsChannel = null,
+        onDone: () {
+          debugPrint('DEBUG: Comments WebSocket closed (onDone)');
+          _wsChannel = null;
+          if (!_isDisposed) {
+            Future.delayed(const Duration(seconds: 3), () => _connectWebSocket());
+          }
+        },
+        onError: (err) {
+          debugPrint('DEBUG: Comments WebSocket error: $err');
+          _wsChannel = null;
+          if (!_isDisposed) {
+            Future.delayed(const Duration(seconds: 5), () => _connectWebSocket());
+          }
+        },
       );
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('DEBUG: Failed to connect to WS: $e');
+      if (!_isDisposed) {
+        Future.delayed(const Duration(seconds: 10), () => _connectWebSocket());
+      }
+    }
   }
 
   void _scrollToBottom() {
@@ -135,13 +167,6 @@ class _FieldAssistantTaskDetailState
     });
   }
 
-  @override
-  void dispose() {
-    _commentController.dispose();
-    _commentScrollController.dispose();
-    _wsChannel?.sink.close();
-    super.dispose();
-  }
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
@@ -166,10 +191,7 @@ class _FieldAssistantTaskDetailState
       _warn('No contact number available for this citizen.');
       return;
     }
-    final uri = Uri(scheme: 'tel', path: contact);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    }
+    await launchPhoneDialer(contact);
   }
 
   Future<void> _startTask() async {
@@ -179,13 +201,15 @@ class _FieldAssistantTaskDetailState
       _warn('Please clock in first.');
       return;
     }
-    final distance = ref
-        .read(attendanceProvider.notifier)
-        .distanceTo(c.latitude, c.longitude);
-    if (distance > 50.0 && distance != double.infinity) {
-      if (!mounted) return;
-      _showProximityWarning(distance);
-      return;
+    if (_requireLocationAtGrievance) {
+      final distance = ref
+          .read(attendanceProvider.notifier)
+          .distanceTo(c.latitude, c.longitude);
+      if (distance > 50.0 && distance != double.infinity) {
+        if (!mounted) return;
+        _showProximityWarning(distance);
+        return;
+      }
     }
     setState(() => _isUpdating = true);
     final err = await ref
@@ -203,13 +227,15 @@ class _FieldAssistantTaskDetailState
 
   Future<void> _captureAndResolve() async {
     final c = _latestComplaint;
-    final distance = ref
-        .read(attendanceProvider.notifier)
-        .distanceTo(c.latitude, c.longitude);
-    if (distance > 50.0 && distance != double.infinity) {
-      if (!mounted) return;
-      _showProximityWarning(distance);
-      return;
+    if (_requireLocationAtGrievance) {
+      final distance = ref
+          .read(attendanceProvider.notifier)
+          .distanceTo(c.latitude, c.longitude);
+      if (distance > 50.0 && distance != double.infinity) {
+        if (!mounted) return;
+        _showProximityWarning(distance);
+        return;
+      }
     }
     final photo = await _picker.pickImage(
       source: ImageSource.camera,
@@ -370,12 +396,16 @@ class _FieldAssistantTaskDetailState
         .read(attendanceProvider.notifier)
         .distanceTo(c.latitude, c.longitude);
     final isAtSite = distance <= 50.0;
-    final canAct = att.isClockedIn && isAtSite;
+    // canAct: if location required, must be at site; else only clock-in for Start Work
+    final needLocation = _requireLocationAtGrievance;
+    final locationOk = !needLocation || isAtSite;
+    final canStartWork = att.isClockedIn && locationOk;
+    final canCaptureResolve = locationOk;
 
     return Scaffold(
       backgroundColor: AppTheme.surfaceScaffold,
       body: widget.isEmbedded
-          ? _buildBody(c, att, isAtSite, canAct, distance)
+          ? _buildBody(c, att, isAtSite, canStartWork, canCaptureResolve, distance)
           : NestedScrollView(
               headerSliverBuilder: (context, innerBoxIsScrolled) => [
                 SliverAppBar(
@@ -421,7 +451,7 @@ class _FieldAssistantTaskDetailState
                       onRefresh: () => ref
                           .read(complaintProvider.notifier)
                           .refreshGrievanceDetail(c.id),
-                      child: _buildBody(c, att, isAtSite, canAct, distance),
+                      child: _buildBody(c, att, isAtSite, canStartWork, canCaptureResolve, distance),
                     ),
                   ),
                 ],
@@ -429,7 +459,8 @@ class _FieldAssistantTaskDetailState
             ),
       bottomNavigationBar: _buildBottomActions(
         c,
-        canAct,
+        canStartWork,
+        canCaptureResolve,
         att.isClockedIn,
         isAtSite,
       ),
@@ -440,7 +471,8 @@ class _FieldAssistantTaskDetailState
     Complaint c,
     AttendanceState att,
     bool isAtSite,
-    bool canAct,
+    bool canStartWork,
+    bool canCaptureResolve,
     double distance,
   ) {
     return ListView(
@@ -511,7 +543,7 @@ class _FieldAssistantTaskDetailState
               ),
               const SizedBox(height: 16),
 
-              // Location Bento Card
+              // Location Bento Card (with proximity radio)
               _buildBentoCard(
                 child: _buildLocationSection(c, att, isAtSite, distance),
               ),

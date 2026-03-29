@@ -15,7 +15,10 @@ import '../widgets/sensitive_blur_wrapper.dart';
 import 'complaint_detail/complaint_detail_screen.dart';
 
 class WardFeedScreen extends ConsumerStatefulWidget {
-  const WardFeedScreen({super.key});
+  /// When true (e.g. embedded in CitizenFeedScreen), the ward header/sliver app bar is hidden.
+  final bool hideAppBar;
+
+  const WardFeedScreen({super.key, this.hideAppBar = false});
 
   @override
   ConsumerState<WardFeedScreen> createState() => _WardFeedScreenState();
@@ -87,36 +90,38 @@ class _WardFeedScreenState extends ConsumerState<WardFeedScreen> {
           parent: BouncingScrollPhysics(),
         ),
         slivers: [
-          // ── Glassmorphic AppBar ─────────────────────
-          SliverAppBar(
-            expandedHeight: 120,
-            collapsedHeight: 64,
-            pinned: true,
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            scrolledUnderElevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.menu_rounded, color: AppTheme.textPrimary),
-              onPressed: () => Scaffold.of(context).openDrawer(),
-            ),
-            actions: const [SizedBox(width: 8)],
-            flexibleSpace: AppTheme.glass(
-              blur: 20,
-              color: AppTheme.surfaceScaffold.withValues(alpha: 0.7),
-              child: FlexibleSpaceBar(
-                centerTitle: false,
-                titlePadding: const EdgeInsets.fromLTRB(60, 0, 20, 12),
-                title: Text(
-                  userWard,
-                  style: GoogleFonts.outfit(
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textPrimary,
-                    fontSize: 24,
+          if (!widget.hideAppBar) ...[
+            // ── Glassmorphic AppBar (ward name) ─────────────────────
+            SliverAppBar(
+              expandedHeight: 120,
+              collapsedHeight: 64,
+              pinned: true,
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.menu_rounded, color: AppTheme.textPrimary),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
+              actions: const [SizedBox(width: 8)],
+              flexibleSpace: AppTheme.glass(
+                blur: 20,
+                color: AppTheme.surfaceScaffold.withValues(alpha: 0.7),
+                child: FlexibleSpaceBar(
+                  centerTitle: false,
+                  titlePadding: const EdgeInsets.fromLTRB(60, 0, 20, 12),
+                  title: Text(
+                    userWard,
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary,
+                      fontSize: 24,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
+          ],
 
           if (_isRefreshing)
             const SliverToBoxAdapter(
